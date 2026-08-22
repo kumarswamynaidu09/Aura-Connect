@@ -58,6 +58,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   detectActiveTab();
   loadStateFromStorage();
   
+  // Force an immediate context detection when the sidepanel opens
+  pollForAIContext();
+  
   // Poll for AI context every 5 seconds
   setInterval(pollForAIContext, 5000);
   // Initial poll
@@ -919,7 +922,10 @@ async function pollForAIContext() {
         // Only update if content changed
         if (!lastExtractedContext || lastExtractedContext.lastUserMessage !== ctx.lastUserMessage) {
           lastExtractedContext = ctx;
+          isMemorySavedToMonad = false; // Reset state so the card shows up
           updateDetectedContextCard(ctx);
+          persistContextToDB(ctx);
+          updateHomeWorkflow();
         }
       }
     });
@@ -989,8 +995,10 @@ async function persistContextToDB(context) {
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   chrome.runtime.onMessage.addListener((request) => {
     if (request.type === 'AURA_NEW_CONTEXT' && request.context) {
+      isMemorySavedToMonad = false; // Reset state so the "Save to AURA" card appears
       updateDetectedContextCard(request.context);
       persistContextToDB(request.context);
+      updateHomeWorkflow(); // Re-render the UI to show the Detected card
     }
   });
 }
