@@ -288,6 +288,23 @@ async function detectActiveTab() {
   updateHomeWorkflow();
 }
 
+// Track tab switching dynamically so sidepanel updates when user moves between ChatGPT/Claude
+if (typeof chrome !== "undefined" && chrome.tabs) {
+  chrome.tabs.onActivated.addListener(async () => {
+    await detectActiveTab();
+    updateActiveAppBanner();
+    updateHomeWorkflow();
+  });
+  
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.url && tab.active) {
+      await detectActiveTab();
+      updateActiveAppBanner();
+      updateHomeWorkflow();
+    }
+  });
+}
+
 function updateActiveAppBanner() {
   document.getElementById("active-app-name-display").innerText = currentAppName;
   document.getElementById("request-target-app").innerText = currentAppName;
