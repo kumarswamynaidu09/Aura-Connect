@@ -19,9 +19,9 @@ export default function Dashboard() {
   const [contexts, setContexts] = useState<ContextRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchContexts = async () => {
+  const fetchContexts = async (isBackground = false) => {
     if (!address) return;
-    setLoading(true);
+    if (!isBackground) setLoading(true);
     try {
       const res = await fetch(`/api/context?walletAddress=${address}`);
       const data = await res.json();
@@ -31,13 +31,18 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Failed to fetch contexts:", err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     if (isConnected && address) {
       fetchContexts();
+      // Real-time polling for the hackathon demo
+      const intervalId = setInterval(() => {
+        fetchContexts(true);
+      }, 2000);
+      return () => clearInterval(intervalId);
     } else {
       setContexts([]);
     }
