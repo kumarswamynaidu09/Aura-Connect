@@ -115,6 +115,10 @@
       </div>
     </header>
 
+    <div id="demo-mode-bar" class="demo-mode-bar" style="display: none;">
+      🎬 DEMO MODE — Transactions are simulated for presentation
+    </div>
+
     <!-- Navigation Tabs -->
     <nav class="tabs-nav">
       <button id="tab-home-btn" class="tab-item active" data-tab="home">
@@ -196,6 +200,7 @@
       <!-- STATE A: CONTEXT DETECTED (Save to AURA) -->
       <section id="state-card-detected" class="action-card state-detected">
         <div class="card-chip chip-purple">🧠 AURA FOUND SOMETHING USEFUL</div>
+        <div id="detected-source-badge" class="source-badge">Extracted from ChatGPT</div>
         <h3 class="card-title">You mentioned a key preference</h3>
         <blockquote id="detected-quote-text" class="quote-box">
           "I build with React and TypeScript and prefer minimal interfaces."

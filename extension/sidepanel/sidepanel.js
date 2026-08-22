@@ -54,8 +54,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   initHomeActions();
   initRevokeModal();
   initSettings();
+  initDemoMode();
   detectActiveTab();
   loadStateFromStorage();
+  
+  // Poll for AI context every 5 seconds
+  setInterval(pollForAIContext, 5000);
+  // Initial poll
+  setTimeout(pollForAIContext, 1500);
 
   // Check real wallet connection on startup
   await syncWalletState();
@@ -454,6 +460,18 @@ function initHomeActions() {
       return;
     }
 
+    if (isDemoMode) {
+      showTxInFlight("🎬 [DEMO] Confirming save in wallet...");
+      setTimeout(() => {
+        isMemorySavedToMonad = true;
+        showTxCompleted("🎬 [DEMO] ✓ Memory Saved on Monad", "0x123abc456def7890demo123abc456def7890");
+        saveStateToStorage();
+        updateHomeWorkflow();
+        showToast("🎬 [DEMO] Saved to your AURA on Monad");
+      }, 2000);
+      return;
+    }
+
     showTxInFlight("Confirming createMemory in MetaMask...");
 
     try {
@@ -494,6 +512,21 @@ function initHomeActions() {
     if (cachedUserBalanceWei < cachedTotalCostWei) {
       showToast(`Insufficient MON. Required: ~${cachedTotalCostMon} MON, Balance: ${cachedUserBalance} MON`);
       await checkWalletFundingAndGas();
+      return;
+    }
+
+    if (isDemoMode) {
+      showTxInFlight("🎬 [DEMO] Confirming 0.0001 MON payment...");
+      setTimeout(() => {
+        const claudeApp = connectedApps.find((a) => a.id === "claude");
+        if (claudeApp) claudeApp.status = "granted";
+        
+        showTxCompleted("🎬 [DEMO] ✓ 0.0001 MON Confirmed! Access Granted", "0x456def7890demo123abc456def7890123");
+        saveStateToStorage();
+        updateHomeWorkflow();
+        renderVault();
+        showToast(`🎬 [DEMO] Context Shared with ${currentAppName}`);
+      }, 2000);
       return;
     }
 
@@ -802,3 +835,98 @@ function loadStateFromStorage() {
     }
   }
 }
+
+// ================= TASK 2 ADDITIONS =================
+
+// Poll for real conversation context from the active AI tab
+let lastExtractedContext = null;
+
+async function pollForAIContext() {
+  try {
+    if (typeof chrome === 'undefined' || !chrome.tabs) return;
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab || !tab.id || !tab.url) return;
+    
+    const host = new URL(tab.url).hostname.toLowerCase();
+    const isAISite = host.includes('chatgpt') || host.includes('openai') || host.includes('claude') || host.includes('perplexity');
+    if (!isAISite) return;
+    
+    chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_CONTEXT' }, (response) => {
+      if (chrome.runtime.lastError || !response) return;
+      
+      const ctx = response.extractedContext;
+      if (ctx && ctx.hasContent && ctx.lastUserMessage) {
+        // Only update if content changed
+        if (!lastExtractedContext || lastExtractedContext.lastUserMessage !== ctx.lastUserMessage) {
+          lastExtractedContext = ctx;
+          updateDetectedContextCard(ctx);
+        }
+      }
+    });
+  } catch (e) {
+    console.log('[AURA] Context polling:', e);
+  }
+}
+
+function updateDetectedContextCard(ctx) {
+  const quoteEl = document.getElementById('detected-quote-text');
+  const titleEl = document.querySelector('#state-card-detected .card-title');
+  
+  if (quoteEl && ctx.lastUserMessage) {
+    // Show a truncated version of the user's actual message
+    const preview = ctx.lastUserMessage.length > 150 
+      ? ctx.lastUserMessage.substring(0, 150) + '...' 
+      : ctx.lastUserMessage;
+    quoteEl.innerText = '"' + preview + '"';
+  }
+  
+  if (titleEl) {
+    titleEl.innerText = `Context detected from ${ctx.platform}`;
+  }
+  
+  // Update the memory content with real extracted text
+  if (ownedMemories.length > 0) {
+    ownedMemories[0].content = ctx.lastUserMessage;
+    ownedMemories[0].summary = ctx.summary.substring(0, 80);
+    ownedMemories[0].sourceApp = ctx.platform;
+  }
+}
+
+let isDemoMode = false;
+
+function initDemoMode() {
+  // Add demo mode to developer panel
+  const devPanel = document.getElementById('dev-tools-panel');
+  if (devPanel) {
+    const demoSection = document.createElement('div');
+    demoSection.innerHTML = `
+      <div class="dev-title" style="margin-top: 12px;">Presentation Demo Mode:</div>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <label class="switch">
+          <input type="checkbox" id="toggle-demo-mode">
+          <span class="slider round"></span>
+        </label>
+        <span style="font-size: 11px; color: #A6A6AE;">Demo Mode (simulates transactions)</span>
+      </div>
+    `;
+    devPanel.appendChild(demoSection);
+    
+    document.getElementById('toggle-demo-mode')?.addEventListener('change', (e) => {
+      isDemoMode = e.target.checked;
+      showToast(isDemoMode ? '🎬 Demo Mode ON — Transactions simulated' : 'Demo Mode OFF — Real transactions');
+      const demoBar = document.getElementById('demo-mode-bar');
+      if (demoBar) {
+        demoBar.style.display = isDemoMode ? 'block' : 'none';
+      }
+    });
+  }
+}
+
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  chrome.runtime.onMessage.addListener((request) => {
+    if (request.type === 'AURA_NEW_CONTEXT' && request.context) {
+      updateDetectedContextCard(request.context);
+    }
+  });
+}
+

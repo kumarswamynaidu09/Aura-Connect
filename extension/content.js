@@ -107,11 +107,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep message channel open for async response
   }
 
-  if (request.type === "GET_AI_CONTEXT") {
+  if (request.type === "GET_AI_CONTEXT" || request.type === "EXTRACT_CONTEXT") {
+    const ctx = extractUserContextSummary();
     sendResponse({
-      platform: detectAIPlatform(),
+      platform: ctx.platform,
       url: window.location.href,
       selectedText: window.getSelection()?.toString() || "",
+      extractedContext: ctx,
     });
     return true;
   }
@@ -188,3 +190,114 @@ function showFloatingToast(message) {
     setTimeout(() => toast.remove(), 300);
   }, 2800);
 }
+
+// Extract conversation messages from the current AI platform
+function extractConversationContext() {
+  const platform = detectAIPlatform();
+  let messages = [];
+  
+  if (platform === 'ChatGPT') {
+    // ChatGPT uses article elements with data-message-author-role
+    const msgEls = document.querySelectorAll('[data-message-author-role]');
+    msgEls.forEach(el => {
+      const role = el.getAttribute('data-message-author-role');
+      const text = el.innerText?.trim();
+      if (text && text.length > 10) {
+        messages.push({ role, text: text.substring(0, 500) });
+      }
+    });
+    // Fallback: try the main content area
+    if (messages.length === 0) {
+      const turns = document.querySelectorAll('div[class*="markdown"], div[class*="message"]');
+      turns.forEach(el => {
+        const text = el.innerText?.trim();
+        if (text && text.length > 20) {
+          messages.push({ role: 'unknown', text: text.substring(0, 500) });
+        }
+      });
+    }
+  } else if (platform === 'Claude') {
+    // Claude uses specific message containers
+    const humanMsgs = document.querySelectorAll('[data-testid*="human"], div[class*="human-turn"], div.font-user-message');
+    const aiMsgs = document.querySelectorAll('[data-testid*="assistant"], div[class*="assistant-turn"], div.font-claude-message');
+    humanMsgs.forEach(el => {
+      const text = el.innerText?.trim();
+      if (text && text.length > 10) messages.push({ role: 'user', text: text.substring(0, 500) });
+    });
+    aiMsgs.forEach(el => {
+      const text = el.innerText?.trim();
+      if (text && text.length > 10) messages.push({ role: 'assistant', text: text.substring(0, 500) });
+    });
+    // Broader fallback for Claude
+    if (messages.length === 0) {
+      const allBlocks = document.querySelectorAll('[class*="Message"], [class*="message"], [data-is-streaming]');
+      allBlocks.forEach(el => {
+        const text = el.innerText?.trim();
+        if (text && text.length > 20) messages.push({ role: 'unknown', text: text.substring(0, 500) });
+      });
+    }
+  } else {
+    // Generic: look for any conversation-like structure
+    const blocks = document.querySelectorAll('[role="log"] > *, [class*="message"], [class*="chat"], article');
+    blocks.forEach(el => {
+      const text = el.innerText?.trim();
+      if (text && text.length > 20 && text.length < 2000) {
+        messages.push({ role: 'unknown', text: text.substring(0, 500) });
+      }
+    });
+  }
+  
+  return messages;
+}
+
+// Extract a useful context summary from the last few user messages
+function extractUserContextSummary() {
+  const messages = extractConversationContext();
+  const userMessages = messages.filter(m => m.role === 'user' || m.role === 'human');
+  
+  // Get the last 3 user messages
+  const recent = userMessages.slice(-3);
+  if (recent.length === 0) {
+    // Fall back to any messages
+    const anyRecent = messages.slice(-3);
+    return {
+      platform: detectAIPlatform(),
+      messageCount: messages.length,
+      summary: anyRecent.map(m => m.text).join(' | '),
+      lastUserMessage: anyRecent.length > 0 ? anyRecent[anyRecent.length - 1].text : '',
+      hasContent: anyRecent.length > 0,
+    };
+  }
+  
+  return {
+    platform: detectAIPlatform(),
+    messageCount: messages.length,
+    summary: recent.map(m => m.text).join(' | '),
+    lastUserMessage: recent[recent.length - 1].text,
+    hasContent: recent.length > 0,
+  };
+}
+
+// Watch for new conversation messages
+let lastMessageCount = 0;
+const observer = new MutationObserver(() => {
+  const ctx = extractUserContextSummary();
+  if (ctx.messageCount > lastMessageCount && ctx.hasContent) {
+    lastMessageCount = ctx.messageCount;
+    // Notify the extension that new context is available
+    try {
+      chrome.runtime.sendMessage({
+        type: 'AURA_NEW_CONTEXT',
+        context: ctx
+      });
+    } catch (e) {}
+  }
+});
+
+// Start observing after a short delay to let the page load
+setTimeout(() => {
+  const target = document.querySelector('main') || document.querySelector('#__next') || document.body;
+  if (target) {
+    observer.observe(target, { childList: true, subtree: true });
+  }
+}, 2000);
