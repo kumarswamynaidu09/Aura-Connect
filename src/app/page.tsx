@@ -112,7 +112,7 @@ export default function Dashboard() {
                     Saved Context Stream
                   </h2>
                   <button 
-                    onClick={fetchContexts}
+                    onClick={() => fetchContexts(false)}
                     disabled={loading}
                     className="p-2 text-[#8E8E93] hover:text-[#FFB000] transition-colors rounded-lg hover:bg-white/5"
                   >
