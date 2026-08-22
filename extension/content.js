@@ -78,22 +78,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Injects authorized context into ChatGPT / Claude / standard inputs
 function injectContextIntoActiveInput(contextText) {
   try {
-    let inputEl = document.querySelector("#prompt-textarea");
-    
-    if (!inputEl) {
-      inputEl = document.querySelector('div[contenteditable="true"]');
-    }
-
-    if (!inputEl) {
-      inputEl = document.querySelector('textarea');
-    }
+    let inputEl = document.querySelector("#prompt-textarea, div.ProseMirror, div[contenteditable='true'], div[role='textbox'], textarea");
 
     if (inputEl) {
-      if (inputEl.isContentEditable) {
-        inputEl.focus();
-        document.execCommand('insertText', false, contextText);
+      inputEl.focus();
+      if (inputEl.isContentEditable || inputEl.getAttribute('contenteditable') === 'true') {
+        const inserted = document.execCommand('insertText', false, contextText);
+        if (!inserted) {
+          // Modern fallback for ProseMirror / Draft.js
+          const p = document.createElement("p");
+          p.textContent = contextText;
+          inputEl.appendChild(p);
+          inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
       } else {
-        inputEl.focus();
         const start = inputEl.selectionStart || 0;
         const end = inputEl.selectionEnd || 0;
         const currentVal = inputEl.value;
@@ -111,7 +109,9 @@ function injectContextIntoActiveInput(contextText) {
     }
   } catch (err) {
     console.error("AURA Context injection failed:", err);
-    return false;
+    navigator.clipboard.writeText(contextText);
+    showFloatingToast("📋 Context copied to clipboard");
+    return true;
   }
 }
 
