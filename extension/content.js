@@ -208,10 +208,10 @@ function extractConversationContext() {
     });
     // Fallback: try the main content area
     if (messages.length === 0) {
-      const turns = document.querySelectorAll('div[class*="markdown"], div[class*="message"]');
+      const turns = document.querySelectorAll('div[class*="markdown"], div[class*="message"], .text-base, [data-message-id]');
       turns.forEach(el => {
         const text = el.innerText?.trim();
-        if (text && text.length > 20) {
+        if (text && text.length > 5) { // Lowered threshold from 20 to 5 to catch shorter test messages
           messages.push({ role: 'unknown', text: text.substring(0, 500) });
         }
       });

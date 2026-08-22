@@ -514,6 +514,37 @@ function initHomeActions() {
     });
   }
 
+  // Force Rescan Button
+  const forceRescanBtn = document.getElementById("btn-force-rescan");
+  if (forceRescanBtn) {
+    forceRescanBtn.addEventListener("click", async () => {
+      showToast("Scanning page for context...");
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab || !tab.id) return;
+        
+        chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_CONTEXT' }, (response) => {
+          if (chrome.runtime.lastError || !response || !response.extractedContext) {
+            showToast("No AURA context found on this page.");
+            return;
+          }
+          const ctx = response.extractedContext;
+          if (ctx.hasContent && ctx.lastUserMessage) {
+            isMemorySavedToMonad = false; // Force the UI to show the Detected card
+            lastExtractedContext = ctx;
+            updateDetectedContextCard(ctx);
+            updateHomeWorkflow();
+            showToast("✓ Context captured!");
+          } else {
+            showToast("Nothing useful detected yet.");
+          }
+        });
+      } catch (err) {
+        showToast("Scan failed.");
+      }
+    });
+  }
+
   // 1. Save to AURA (REAL createMemory on Monad Testnet)
   document.getElementById("btn-action-save-context").addEventListener("click", async () => {
     if (!userAddress) {
