@@ -18636,13 +18636,20 @@ ${prettyStateOverride(stateOverride)}`;
   }
   async function connectUserWallet() {
     await ensureMonadNetwork();
-    const accounts = await sendProviderRequest({
-      method: "eth_requestAccounts"
-    });
-    if (!accounts || !accounts[0]) {
-      throw new Error("Wallet connection was rejected.");
+    try {
+      const accounts = await sendProviderRequest({
+        method: "eth_requestAccounts"
+      });
+      if (!accounts || !accounts[0]) {
+        throw new Error("Wallet connection was rejected.");
+      }
+      return getAddress(accounts[0]);
+    } catch (error) {
+      if (error?.message && error.message.includes("already pending")) {
+        throw new Error("MetaMask is waiting for you! Please open the MetaMask extension popup to approve the connection.");
+      }
+      throw error;
     }
-    return getAddress(accounts[0]);
   }
   async function deployAuraConnectContract() {
     const from16 = await connectUserWallet();

@@ -287,15 +287,22 @@ export async function ensureMonadNetwork(): Promise<boolean> {
 export async function connectUserWallet(): Promise<Address> {
   await ensureMonadNetwork();
 
-  const accounts = (await sendProviderRequest({
-    method: "eth_requestAccounts",
-  })) as string[];
+  try {
+    const accounts = (await sendProviderRequest({
+      method: "eth_requestAccounts",
+    })) as string[];
 
-  if (!accounts || !accounts[0]) {
-    throw new Error("Wallet connection was rejected.");
+    if (!accounts || !accounts[0]) {
+      throw new Error("Wallet connection was rejected.");
+    }
+
+    return getAddress(accounts[0]) as Address;
+  } catch (error: any) {
+    if (error?.message && error.message.includes("already pending")) {
+      throw new Error("MetaMask is waiting for you! Please open the MetaMask extension popup to approve the connection.");
+    }
+    throw error;
   }
-
-  return getAddress(accounts[0]) as Address;
 }
 
 /**
