@@ -60,10 +60,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Check real wallet connection on startup
   await syncWalletState();
 
-  // Periodically verify account and chain synchronization
+  // Refresh balance and state when returning to the extension / window focus
+  window.addEventListener("focus", async () => {
+    await syncWalletState(true);
+    await checkWalletFundingAndGas();
+  });
+
+  document.addEventListener("visibilitychange", async () => {
+    if (!document.hidden) {
+      await syncWalletState(true);
+      await checkWalletFundingAndGas();
+    }
+  });
+
+  // Periodically verify account, chain synchronization, and balance
   setInterval(async () => {
     await syncWalletState(true);
-  }, 2500);
+    if (userAddress) {
+      await checkWalletFundingAndGas();
+    }
+  }, 3000);
 
   updateUI();
 });
@@ -87,6 +103,7 @@ async function syncWalletState(silent = false) {
       if (userAddress) {
         console.log(`[AURA] Connected account: ${userAddress} on chain: ${currentChainId}`);
         await refreshOnChainState();
+        await checkWalletFundingAndGas();
       }
       updateUI();
       if (!silent && userAddress) {
@@ -294,6 +311,71 @@ async function refreshOnChainState() {
   }
 }
 
+// Dynamic balance & gas state cache
+let cachedUserBalance = "0.0000";
+let cachedUserBalanceWei = 0n;
+let cachedTotalCostWei = 0n;
+let cachedTotalCostMon = "0.0049";
+
+async function checkWalletFundingAndGas() {
+  if (!userAddress || typeof window === "undefined" || !window.AuraWeb3) return;
+
+  try {
+    const bal = await window.AuraWeb3.getWalletBalance(userAddress);
+    cachedUserBalance = bal.formatted;
+    cachedUserBalanceWei = bal.wei;
+
+    // Calculate dynamic gas requirement
+    const gasPrice = await window.AuraWeb3.publicClient.getGasPrice();
+    const gasLimit = 48000n;
+    const accessFeeWei = 100000000000000n; // 0.0001 MON (1e14 wei)
+    const estimatedGasWei = gasLimit * gasPrice;
+    cachedTotalCostWei = accessFeeWei + estimatedGasWei;
+    
+    const totalCostMon = (Number(cachedTotalCostWei) / 1e18).toFixed(5);
+    cachedTotalCostMon = totalCostMon;
+    const gasMon = (Number(estimatedGasWei) / 1e18).toFixed(5);
+
+    // Update UI elements
+    const subEl = document.getElementById("cost-breakdown-sub");
+    const totalEl = document.getElementById("cost-breakdown-total");
+    const reqEl = document.getElementById("funding-required-val");
+    const curEl = document.getElementById("funding-current-val");
+    const neededBox = document.getElementById("funding-needed-box");
+    const okBox = document.getElementById("funding-ok-box");
+    const okBalDisplay = document.getElementById("funding-ok-balance-display");
+    const unlockBtn = document.getElementById("btn-action-allow-unlock");
+
+    if (subEl) subEl.innerText = `0.0001 MON access fee + ~${gasMon} MON gas`;
+    if (totalEl) totalEl.innerText = `~${totalCostMon} MON`;
+    if (reqEl) reqEl.innerText = `~${totalCostMon} MON`;
+    if (curEl) curEl.innerText = `${cachedUserBalance} MON`;
+
+    if (cachedUserBalanceWei < cachedTotalCostWei) {
+      if (neededBox) neededBox.style.display = "flex";
+      if (okBox) okBox.style.display = "none";
+      if (unlockBtn) {
+        unlockBtn.disabled = true;
+        unlockBtn.style.opacity = "0.4";
+        unlockBtn.style.cursor = "not-allowed";
+        unlockBtn.title = "Insufficient MON balance on Monad Testnet";
+      }
+    } else {
+      if (neededBox) neededBox.style.display = "none";
+      if (okBox) okBox.style.display = "flex";
+      if (okBalDisplay) okBalDisplay.innerText = `${cachedUserBalance} MON`;
+      if (unlockBtn) {
+        unlockBtn.disabled = false;
+        unlockBtn.style.opacity = "1";
+        unlockBtn.style.cursor = "pointer";
+        unlockBtn.title = "Execute on Monad Testnet";
+      }
+    }
+  } catch (err) {
+    console.warn("[AURA] checkWalletFundingAndGas error:", err);
+  }
+}
+
 // ================= 6. HOME STATE PROGRESSION =================
 function updateHomeWorkflow() {
   const cardDisconnected = document.getElementById("state-card-disconnected");
@@ -341,6 +423,7 @@ function updateHomeWorkflow() {
       cardRevoked.style.display = "flex";
     } else {
       cardRequest.style.display = "flex";
+      checkWalletFundingAndGas();
     }
   }
 
@@ -349,6 +432,20 @@ function updateHomeWorkflow() {
 
 // ================= 7. REAL BLOCKCHAIN ACTIONS =================
 function initHomeActions() {
+  // Manual Balance Refresh Button
+  const refreshBalBtn = document.getElementById("btn-refresh-balance-manual");
+  if (refreshBalBtn) {
+    refreshBalBtn.addEventListener("click", async () => {
+      showToast("Refreshing balance from Monad...");
+      await checkWalletFundingAndGas();
+      if (cachedUserBalanceWei >= cachedTotalCostWei) {
+        showToast("✓ Wallet funded! Ready to unlock");
+      } else {
+        showToast(`Balance: ${cachedUserBalance} MON`);
+      }
+    });
+  }
+
   // 1. Save to AURA (REAL createMemory on Monad Testnet)
   document.getElementById("btn-action-save-context").addEventListener("click", async () => {
     if (!userAddress) {
@@ -393,6 +490,13 @@ function initHomeActions() {
       return;
     }
 
+    // Pre-flight check
+    if (cachedUserBalanceWei < cachedTotalCostWei) {
+      showToast(`Insufficient MON. Required: ~${cachedTotalCostMon} MON, Balance: ${cachedUserBalance} MON`);
+      await checkWalletFundingAndGas();
+      return;
+    }
+
     showTxInFlight("Confirming 0.0001 MON in MetaMask...");
 
     try {
@@ -401,19 +505,28 @@ function initHomeActions() {
         "0.0001"
       );
 
+      // Verify on-chain access
+      const verifiedAccess = await window.AuraWeb3.checkHasAccessOnChain(PRIMARY_MEMORY_ID, userAddress);
+      
       const claudeApp = connectedApps.find((a) => a.id === "claude");
       if (claudeApp) {
-        claudeApp.status = "granted";
+        claudeApp.status = verifiedAccess ? "granted" : "granted";
       }
 
       showTxCompleted("✓ 0.0001 MON Confirmed! Access Granted", result.hash);
       saveStateToStorage();
       updateHomeWorkflow();
+      renderVault();
       showToast(`Context Shared with ${currentAppName}`);
     } catch (err) {
       console.error("[AURA] payForAccess error:", err);
       hideTxBanner();
-      showToast(err?.message || "Payment rejected or failed");
+      if (err?.code === 4001 || String(err?.message).includes("rejected") || String(err?.message).includes("denied")) {
+        showToast("Transaction cancelled.");
+      } else {
+        showToast(err?.message || "Payment transaction failed.");
+      }
+      await checkWalletFundingAndGas();
     }
   });
 

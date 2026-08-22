@@ -1129,6 +1129,102 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
   max-width: 90%;
 }
 
+/* Funding State UI */
+.funding-box {
+  background: rgba(255, 92, 92, 0.08);
+  border: 1px solid rgba(255, 92, 92, 0.3);
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.funding-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #FF5C5C;
+}
+
+.funding-grid {
+  display: flex;
+  justify-content: space-between;
+  background: #17171D;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #34343C;
+}
+
+.funding-sub-label {
+  font-size: 9px;
+  color: #A6A6AE;
+  display: block;
+}
+
+.funding-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: #F5F5F7;
+}
+
+.funding-val-danger {
+  font-size: 11px;
+  font-weight: 700;
+  color: #FF5C5C;
+}
+
+.funding-hint {
+  font-size: 10px;
+  color: #A6A6AE;
+  line-height: 1.4;
+}
+
+.funding-btn-row {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-faucet {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #FFB000, #FF6A00);
+  color: #111116;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 15px rgba(255, 138, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.btn-faucet:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 157, 0, 0.4);
+}
+
+.funding-ok-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(85, 214, 160, 0.1);
+  border: 1px solid rgba(85, 214, 160, 0.3);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #55D6A0;
+}
+
+.pulse-dot-emerald {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #55D6A0;
+  box-shadow: 0 0 8px #55D6A0;
+}
+
 /* Helpers */
 .font-mono { font-family: ui-monospace, monospace; }
 

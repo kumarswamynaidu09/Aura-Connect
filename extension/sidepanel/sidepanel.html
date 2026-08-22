@@ -224,19 +224,52 @@
           <div class="item-bullet">✓ Minimalist UI guidelines</div>
         </div>
 
+        <!-- Cost Breakdown Card -->
         <div class="access-fee-card">
           <div>
-            <div class="fee-label">One-Time Access Fee</div>
-            <div class="fee-sub">Goes directly to your context protocol balance</div>
+            <div class="fee-label">Total Required on Monad</div>
+            <div id="cost-breakdown-sub" class="fee-sub">0.0001 MON access fee + ~0.0048 MON gas</div>
           </div>
-          <div class="fee-val-tag">0.0001 MON</div>
+          <div id="cost-breakdown-total" class="fee-val-tag">~0.0049 MON</div>
+        </div>
+
+        <!-- INSUFFICIENT BALANCE FUNDING BLOCK -->
+        <div id="funding-needed-box" class="funding-box" style="display: none;">
+          <div class="funding-title">⚠ Not enough MON on Monad Testnet</div>
+          <div class="funding-grid">
+            <div>
+              <span class="funding-sub-label">Required:</span>
+              <span id="funding-required-val" class="funding-val font-mono">~0.0049 MON</span>
+            </div>
+            <div>
+              <span class="funding-sub-label">Your Balance:</span>
+              <span id="funding-current-val" class="funding-val-danger font-mono">0.0000 MON</span>
+            </div>
+          </div>
+          <p class="funding-hint">
+            Get free Monad Testnet MON from the official faucet, then return here.
+          </p>
+          <div class="funding-btn-row">
+            <a id="btn-open-faucet" href="https://testnet.monad.xyz/" target="_blank" class="btn-faucet">
+              Get Testnet MON ↗
+            </a>
+            <button id="btn-refresh-balance-manual" class="btn-ghost">
+              ↺ Refresh Balance
+            </button>
+          </div>
+        </div>
+
+        <!-- SUFFICIENT BALANCE CONFIRMATION BLOCK -->
+        <div id="funding-ok-box" class="funding-ok-badge" style="display: none;">
+          <span class="pulse-dot-emerald"></span>
+          <span>✓ Wallet Funded • Balance: <strong id="funding-ok-balance-display">0.0500 MON</strong></span>
         </div>
 
         <p class="security-reassurance">
           🔒 You stay in complete control and can revoke access anytime in your Vault.
         </p>
 
-        <div class="action-btn-row">
+        <div id="request-actions-row" class="action-btn-row">
           <button id="btn-action-allow-unlock" class="btn-cyan">Allow & Unlock (0.0001 MON)</button>
           <button id="btn-action-dismiss-request" class="btn-ghost">Not now</button>
         </div>
