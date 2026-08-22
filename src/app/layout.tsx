@@ -6,9 +6,9 @@ import { Providers } from "@/components/Providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "ProofPass — AI Content Passport",
+  title: "AURA CONNECT — Sovereign AI Context & Memory Protocol on Monad",
   description:
-    "Portable cryptographic provenance for AI-generated content. Every asset carries its proof.",
+    "Own, monetize, and permission your AI memory across applications via Monad high-throughput EVM.",
 };
 
 export default function RootLayout({
