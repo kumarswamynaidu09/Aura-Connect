@@ -3,7 +3,9 @@ import {
   http,
   parseEther,
   formatEther,
+  formatGwei,
   encodeFunctionData,
+  getAddress,
   keccak256,
   stringToBytes,
   type Hash,
@@ -11,27 +13,40 @@ import {
 } from "viem";
 import { monadTestnet } from "../../src/config/monad";
 import { AuraConnectABI } from "../../src/contracts/AuraConnectABI";
+import AuraConnectArtifact from "../../src/contracts/AuraConnect.json";
 
 declare const chrome: any;
 
-export const CONTRACT_ADDRESS = "0x9A48F9c7A6E469bFe351E772877a5b3a8863f695" as Address;
+export const DEFAULT_CONTRACT_ADDRESS = getAddress("0x9A48F9c7A6E469BFE351e772877A5B3A8863f695");
+export let ACTIVE_CONTRACT_ADDRESS: Address = DEFAULT_CONTRACT_ADDRESS;
+
 export const MONAD_CHAIN_ID_HEX = "0x279f"; // 10143
 export const MONAD_CHAIN_ID_DEC = 10143;
 export const MONAD_RPC_URL = "https://testnet-rpc.monad.xyz";
 export const MONAD_EXPLORER_URL = "https://testnet.monadscan.com";
 
-// Public RPC Client for reading contract state directly on Monad Testnet
+// Public RPC Client for reading contract state on Monad Testnet
 export const publicClient = createPublicClient({
   chain: monadTestnet,
   transport: http(MONAD_RPC_URL),
 });
 
 /**
+ * Updates active contract address
+ */
+export function setActiveContractAddress(addr: string) {
+  try {
+    ACTIVE_CONTRACT_ADDRESS = getAddress(addr);
+  } catch (e) {
+    ACTIVE_CONTRACT_ADDRESS = DEFAULT_CONTRACT_ADDRESS;
+  }
+}
+
+/**
  * Robust Chrome Extension Provider Bridge.
- * Bridges RPC requests from the extension Side Panel to window.ethereum running in the active web tab's MAIN world.
  */
 export async function sendProviderRequest(args: { method: string; params?: any[] }): Promise<any> {
-  // 1. Direct window.ethereum if available (e.g. in standard web contexts)
+  // 1. Direct window.ethereum if available
   if (typeof window !== "undefined" && (window as any).ethereum && !(window as any).ethereum.__isExtensionBridge) {
     try {
       return await (window as any).ethereum.request(args);
@@ -42,7 +57,7 @@ export async function sendProviderRequest(args: { method: string; params?: any[]
     }
   }
 
-  // 2. Extension context: Execute script in active tab's MAIN world where MetaMask is injected
+  // 2. Extension context: Execute script in active tab's MAIN world
   if (typeof chrome !== "undefined" && chrome.tabs && chrome.scripting) {
     let targetTabId: number | undefined;
 
@@ -56,7 +71,6 @@ export async function sendProviderRequest(args: { method: string; params?: any[]
       }
     } catch (e) {}
 
-    // If active tab is internal (e.g. chrome://extensions), find any open web tab
     if (!targetTabId) {
       try {
         const allTabs = await chrome.tabs.query({});
@@ -64,25 +78,6 @@ export async function sendProviderRequest(args: { method: string; params?: any[]
         if (webTab && webTab.id) {
           targetTabId = webTab.id;
         }
-      } catch (e) {}
-    }
-
-    // If no web tab exists, open a web tab to host the bridge
-    if (!targetTabId) {
-      try {
-        const newTab = await chrome.tabs.create({ url: "https://chatgpt.com", active: true });
-        targetTabId = newTab.id;
-        // Wait for tab to load
-        await new Promise((resolve) => {
-          const listener = (tabId: number, info: any) => {
-            if (tabId === targetTabId && info.status === "complete") {
-              chrome.tabs.onUpdated.removeListener(listener);
-              setTimeout(resolve, 800);
-            }
-          };
-          chrome.tabs.onUpdated.addListener(listener);
-          setTimeout(resolve, 3000);
-        });
       } catch (e) {}
     }
 
@@ -135,23 +130,24 @@ export async function sendProviderRequest(args: { method: string; params?: any[]
         target: { tabId: targetTabId! },
         world: "MAIN",
         func: async (rpcPayload: { method: string; params?: any[] }) => {
-          const findProvider = async () => {
+          const findProvider = () => {
             const w = window as any;
             if (w.ethereum) return w.ethereum;
             if (w.rabby) return w.rabby;
             if (w.phantom?.ethereum) return w.phantom.ethereum;
             if (w.coinbaseWalletExtension) return w.coinbaseWalletExtension;
-
-            for (let i = 0; i < 4; i++) {
-              await new Promise((r) => setTimeout(r, 200));
-              if (w.ethereum) return w.ethereum;
-              if (w.rabby) return w.rabby;
-              if (w.phantom?.ethereum) return w.phantom.ethereum;
-            }
             return null;
           };
 
-          const eth = await findProvider();
+          let eth = findProvider();
+          if (!eth) {
+            for (let i = 0; i < 4; i++) {
+              await new Promise((r) => setTimeout(r, 150));
+              eth = findProvider();
+              if (eth) break;
+            }
+          }
+
           if (!eth) {
             return { error: "METAMASK_NOT_DETECTED" };
           }
@@ -193,28 +189,13 @@ export async function sendProviderRequest(args: { method: string; params?: any[]
 }
 
 /**
- * Checks if MetaMask or an EIP-1193 provider is installed/detected
- */
-export async function isWalletDetected(): Promise<boolean> {
-  try {
-    const chainId = await sendProviderRequest({ method: "eth_chainId" });
-    return Boolean(chainId);
-  } catch (err: any) {
-    if (err.message && err.message.includes("not detected")) {
-      return false;
-    }
-    return false;
-  }
-}
-
-/**
- * Gets currently selected account without prompting (if already authorized)
+ * Gets currently selected account without prompting
  */
 export async function getConnectedAccount(): Promise<Address | null> {
   try {
     const accounts = (await sendProviderRequest({ method: "eth_accounts" })) as string[];
     if (accounts && accounts.length > 0 && accounts[0]) {
-      return accounts[0] as Address;
+      return getAddress(accounts[0]) as Address;
     }
     return null;
   } catch (err) {
@@ -231,6 +212,33 @@ export async function getCurrentChainId(): Promise<number> {
     return parseInt(hex, 16);
   } catch (err) {
     return 0;
+  }
+}
+
+/**
+ * Gets balance of an address on Monad Testnet
+ */
+export async function getWalletBalance(addr: Address): Promise<{ wei: bigint; formatted: string }> {
+  try {
+    const wei = await publicClient.getBalance({ address: addr });
+    return {
+      wei,
+      formatted: Number(formatEther(wei)).toFixed(4),
+    };
+  } catch (e) {
+    return { wei: 0n, formatted: "0.0000" };
+  }
+}
+
+/**
+ * Checks if active contract has bytecode deployed on Monad Testnet
+ */
+export async function checkContractDeployed(addr: Address = ACTIVE_CONTRACT_ADDRESS): Promise<boolean> {
+  try {
+    const code = await publicClient.getBytecode({ address: addr });
+    return Boolean(code && code.length > 2);
+  } catch (e) {
+    return false;
   }
 }
 
@@ -287,7 +295,45 @@ export async function connectUserWallet(): Promise<Address> {
     throw new Error("Wallet connection was rejected.");
   }
 
-  return accounts[0] as Address;
+  return getAddress(accounts[0]) as Address;
+}
+
+/**
+ * Deploys AuraConnect contract directly from user's connected wallet on Monad Testnet
+ */
+export async function deployAuraConnectContract(): Promise<{ contractAddress: Address; hash: Hash }> {
+  const from = await connectUserWallet();
+  await ensureMonadNetwork();
+
+  console.log(`[AURA] Deploying AuraConnect from ${from}...`);
+
+  const txHash = (await sendProviderRequest({
+    method: "eth_sendTransaction",
+    params: [
+      {
+        from,
+        data: AuraConnectArtifact.bytecode,
+        gas: "0x16E360", // 1,500,000 gas limit for deployment
+      },
+    ],
+  })) as Hash;
+
+  console.log(`[AURA] Deploy tx submitted: ${txHash}. Waiting for confirmation...`);
+
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: txHash,
+    confirmations: 1,
+    timeout: 60000,
+  });
+
+  if (!receipt.contractAddress) {
+    throw new Error("Deployment completed but no contract address returned.");
+  }
+
+  const deployedAddr = getAddress(receipt.contractAddress);
+  setActiveContractAddress(deployedAddr);
+
+  return { contractAddress: deployedAddr, hash: txHash };
 }
 
 /**
@@ -309,16 +355,49 @@ export async function executeCreateMemoryOnChain(
     args: [memoryId, metadataURI, feeWei],
   });
 
-  console.log(`[AURA] Sending createMemory tx from ${from}...`);
+  // Calculate gas limit with tight buffer as per Monad gas documentation
+  let gasLimit = 65000n;
+  try {
+    const estimated = await publicClient.estimateGas({
+      account: from,
+      to: ACTIVE_CONTRACT_ADDRESS,
+      data: calldata,
+    });
+    gasLimit = estimated + estimated / 10n; // 10% tight buffer
+  } catch (e) {
+    gasLimit = 65000n;
+  }
+
+  const gasPrice = await publicClient.getGasPrice();
+  const balance = await publicClient.getBalance({ address: from });
+  const totalCost = gasLimit * gasPrice;
+
+  console.log("==========================================");
+  console.log("[AURA DEBUG] Transaction Pre-flight:");
+  console.log("Wallet:", from);
+  console.log("Balance:", formatEther(balance), "MON");
+  console.log("Chain ID:", MONAD_CHAIN_ID_DEC);
+  console.log("Contract:", ACTIVE_CONTRACT_ADDRESS);
+  console.log("Function: createMemory");
+  console.log("Gas Limit:", gasLimit.toString());
+  console.log("Gas Price:", formatGwei(gasPrice), "Gwei");
+  console.log("Estimated Gas Fee:", formatEther(totalCost), "MON");
+  console.log("==========================================");
+
+  if (balance < totalCost) {
+    throw new Error(
+      `Insufficient MON for gas fee. Required: ~${formatEther(totalCost)} MON, Balance: ${formatEther(balance)} MON. Claim testnet tokens at testnet.monad.xyz`
+    );
+  }
 
   const txHash = (await sendProviderRequest({
     method: "eth_sendTransaction",
     params: [
       {
         from,
-        to: CONTRACT_ADDRESS,
+        to: ACTIVE_CONTRACT_ADDRESS,
         data: calldata,
-        gas: "0x3D090", // 250k gas limit
+        gas: `0x${gasLimit.toString(16)}`,
       },
     ],
   })) as Hash;
@@ -356,17 +435,52 @@ export async function executePayForAccessOnChain(
     args: [memoryId],
   });
 
-  console.log(`[AURA] Sending payForAccess tx from ${from} for 0.0001 MON...`);
+  // Calculate gas limit with tight buffer as per Monad gas documentation
+  let gasLimit = 48000n;
+  try {
+    const estimated = await publicClient.estimateGas({
+      account: from,
+      to: ACTIVE_CONTRACT_ADDRESS,
+      data: calldata,
+      value: feeWei,
+    });
+    gasLimit = estimated + estimated / 10n; // 10% tight buffer
+  } catch (e) {
+    gasLimit = 48000n;
+  }
+
+  const gasPrice = await publicClient.getGasPrice();
+  const balance = await publicClient.getBalance({ address: from });
+  const totalCost = feeWei + gasLimit * gasPrice;
+
+  console.log("==========================================");
+  console.log("[AURA DEBUG] payForAccess Pre-flight:");
+  console.log("Wallet:", from);
+  console.log("Balance:", formatEther(balance), "MON");
+  console.log("Chain ID:", MONAD_CHAIN_ID_DEC);
+  console.log("Contract:", ACTIVE_CONTRACT_ADDRESS);
+  console.log("Function: payForAccess");
+  console.log("Value:", feeMon, "MON");
+  console.log("Gas Limit:", gasLimit.toString());
+  console.log("Gas Price:", formatGwei(gasPrice), "Gwei");
+  console.log("Estimated Total Cost:", formatEther(totalCost), "MON");
+  console.log("==========================================");
+
+  if (balance < totalCost) {
+    throw new Error(
+      `Insufficient MON for access fee + gas. Required: ~${formatEther(totalCost)} MON, Balance: ${formatEther(balance)} MON. Claim testnet tokens at testnet.monad.xyz`
+    );
+  }
 
   const txHash = (await sendProviderRequest({
     method: "eth_sendTransaction",
     params: [
       {
         from,
-        to: CONTRACT_ADDRESS,
+        to: ACTIVE_CONTRACT_ADDRESS,
         data: calldata,
         value: `0x${feeWei.toString(16)}`,
-        gas: "0x249F0", // 150k gas limit
+        gas: `0x${gasLimit.toString(16)}`,
       },
     ],
   })) as Hash;
@@ -406,16 +520,46 @@ export async function executeRevokeAccessOnChain(
     args: [memoryId, consumerAddress],
   });
 
-  console.log(`[AURA] Sending revokeAccess for consumer ${consumerAddress}...`);
+  let gasLimit = 38000n;
+  try {
+    const estimated = await publicClient.estimateGas({
+      account: from,
+      to: ACTIVE_CONTRACT_ADDRESS,
+      data: calldata,
+    });
+    gasLimit = estimated + estimated / 10n;
+  } catch (e) {
+    gasLimit = 38000n;
+  }
+
+  const gasPrice = await publicClient.getGasPrice();
+  const balance = await publicClient.getBalance({ address: from });
+  const totalCost = gasLimit * gasPrice;
+
+  console.log("==========================================");
+  console.log("[AURA DEBUG] revokeAccess Pre-flight:");
+  console.log("Wallet:", from);
+  console.log("Balance:", formatEther(balance), "MON");
+  console.log("Contract:", ACTIVE_CONTRACT_ADDRESS);
+  console.log("Consumer to Revoke:", consumerAddress);
+  console.log("Gas Limit:", gasLimit.toString());
+  console.log("Estimated Gas Fee:", formatEther(totalCost), "MON");
+  console.log("==========================================");
+
+  if (balance < totalCost) {
+    throw new Error(
+      `Insufficient MON for gas fee. Required: ~${formatEther(totalCost)} MON, Balance: ${formatEther(balance)} MON.`
+    );
+  }
 
   const txHash = (await sendProviderRequest({
     method: "eth_sendTransaction",
     params: [
       {
         from,
-        to: CONTRACT_ADDRESS,
+        to: ACTIVE_CONTRACT_ADDRESS,
         data: calldata,
-        gas: "0x186A0", // 100k gas limit
+        gas: `0x${gasLimit.toString(16)}`,
       },
     ],
   })) as Hash;
@@ -444,14 +588,13 @@ export async function checkHasAccessOnChain(
 ): Promise<boolean> {
   try {
     const hasAccess = await publicClient.readContract({
-      address: CONTRACT_ADDRESS,
+      address: ACTIVE_CONTRACT_ADDRESS,
       abi: AuraConnectABI,
       functionName: "hasAccess",
       args: [memoryId, consumerAddress],
     });
     return Boolean(hasAccess);
   } catch (err) {
-    console.error("[AURA] hasAccess query error:", err);
     return false;
   }
 }
@@ -462,7 +605,7 @@ export async function checkHasAccessOnChain(
 export async function getMemoryRecordOnChain(memoryId: `0x${string}`) {
   try {
     const record = await publicClient.readContract({
-      address: CONTRACT_ADDRESS,
+      address: ACTIVE_CONTRACT_ADDRESS,
       abi: AuraConnectABI,
       functionName: "getMemory",
       args: [memoryId],
@@ -478,9 +621,11 @@ if (typeof window !== "undefined") {
   (window as any).AuraWeb3 = {
     publicClient,
     sendProviderRequest,
-    isWalletDetected,
     getConnectedAccount,
     getCurrentChainId,
+    getWalletBalance,
+    checkContractDeployed,
+    deployAuraConnectContract,
     ensureMonadNetwork,
     connectUserWallet,
     executeCreateMemoryOnChain,
@@ -488,7 +633,9 @@ if (typeof window !== "undefined") {
     executeRevokeAccessOnChain,
     checkHasAccessOnChain,
     getMemoryRecordOnChain,
-    CONTRACT_ADDRESS,
+    setActiveContractAddress,
+    DEFAULT_CONTRACT_ADDRESS,
+    ACTIVE_CONTRACT_ADDRESS,
     MONAD_CHAIN_ID_DEC,
     MONAD_EXPLORER_URL,
     keccak256,

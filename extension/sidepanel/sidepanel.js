@@ -575,6 +575,30 @@ function initSettings() {
     updateHomeWorkflow();
   });
 
+  // Deploy Contract to Monad Testnet
+  const deployBtn = document.getElementById("btn-deploy-contract-monad");
+  if (deployBtn) {
+    deployBtn.addEventListener("click", async () => {
+      showTxInFlight("Deploying AuraConnect contract to Monad Testnet...");
+      try {
+        const res = await window.AuraWeb3.deployAuraConnectContract();
+        showTxCompleted(`✓ AuraConnect Deployed!`, res.hash);
+        showToast(`Contract deployed at ${formatAddress(res.contractAddress)}`);
+        
+        // Update contract link in settings
+        const contractLink = document.querySelector(".settings-entry a");
+        if (contractLink) {
+          contractLink.href = `https://testnet.monadscan.com/address/${res.contractAddress}`;
+          contractLink.innerText = `${formatAddress(res.contractAddress)} ↗`;
+        }
+      } catch (err) {
+        console.error("Deployment failed:", err);
+        hideTxBanner();
+        showToast(err?.message || "Deployment failed");
+      }
+    });
+  }
+
   // Reset Cache
   document.getElementById("btn-reset-cache").addEventListener("click", () => {
     localStorage.clear();

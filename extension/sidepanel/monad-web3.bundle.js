@@ -9732,13 +9732,16 @@ ${prettyStateOverride(stateOverride)}`;
   // extension/src/web3-client.ts
   var web3_client_exports = {};
   __export(web3_client_exports, {
-    CONTRACT_ADDRESS: () => CONTRACT_ADDRESS,
+    ACTIVE_CONTRACT_ADDRESS: () => ACTIVE_CONTRACT_ADDRESS,
+    DEFAULT_CONTRACT_ADDRESS: () => DEFAULT_CONTRACT_ADDRESS,
     MONAD_CHAIN_ID_DEC: () => MONAD_CHAIN_ID_DEC,
     MONAD_CHAIN_ID_HEX: () => MONAD_CHAIN_ID_HEX,
     MONAD_EXPLORER_URL: () => MONAD_EXPLORER_URL,
     MONAD_RPC_URL: () => MONAD_RPC_URL,
+    checkContractDeployed: () => checkContractDeployed,
     checkHasAccessOnChain: () => checkHasAccessOnChain,
     connectUserWallet: () => connectUserWallet,
+    deployAuraConnectContract: () => deployAuraConnectContract,
     ensureMonadNetwork: () => ensureMonadNetwork,
     executeCreateMemoryOnChain: () => executeCreateMemoryOnChain,
     executePayForAccessOnChain: () => executePayForAccessOnChain,
@@ -9746,9 +9749,10 @@ ${prettyStateOverride(stateOverride)}`;
     getConnectedAccount: () => getConnectedAccount,
     getCurrentChainId: () => getCurrentChainId,
     getMemoryRecordOnChain: () => getMemoryRecordOnChain,
-    isWalletDetected: () => isWalletDetected,
+    getWalletBalance: () => getWalletBalance,
     publicClient: () => publicClient,
-    sendProviderRequest: () => sendProviderRequest
+    sendProviderRequest: () => sendProviderRequest,
+    setActiveContractAddress: () => setActiveContractAddress
   });
 
   // node_modules/viem/_esm/utils/getAction.js
@@ -17838,8 +17842,11 @@ ${prettyStateOverride(stateOverride)}`;
 
   // node_modules/viem/_esm/index.js
   init_encodeFunctionData();
+  init_getAddress();
   init_toBytes();
   init_keccak256();
+  init_formatEther();
+  init_formatGwei();
 
   // src/config/monad.ts
   var monadTestnet = defineChain({
@@ -18004,8 +18011,416 @@ ${prettyStateOverride(stateOverride)}`;
     }
   ];
 
+  // src/contracts/AuraConnect.json
+  var AuraConnect_default = {
+    contractName: "AuraConnect",
+    abi: [
+      {
+        anonymous: false,
+        inputs: [
+          {
+            indexed: true,
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            indexed: true,
+            internalType: "address",
+            name: "consumer",
+            type: "address"
+          },
+          {
+            indexed: true,
+            internalType: "address",
+            name: "granter",
+            type: "address"
+          }
+        ],
+        name: "AccessGranted",
+        type: "event"
+      },
+      {
+        anonymous: false,
+        inputs: [
+          {
+            indexed: true,
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            indexed: true,
+            internalType: "address",
+            name: "consumer",
+            type: "address"
+          },
+          {
+            indexed: true,
+            internalType: "address",
+            name: "revoker",
+            type: "address"
+          }
+        ],
+        name: "AccessRevoked",
+        type: "event"
+      },
+      {
+        anonymous: false,
+        inputs: [
+          {
+            indexed: true,
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            indexed: true,
+            internalType: "address",
+            name: "owner",
+            type: "address"
+          },
+          {
+            indexed: false,
+            internalType: "uint256",
+            name: "accessFee",
+            type: "uint256"
+          },
+          {
+            indexed: false,
+            internalType: "string",
+            name: "metadataURI",
+            type: "string"
+          }
+        ],
+        name: "MemoryCreated",
+        type: "event"
+      },
+      {
+        anonymous: false,
+        inputs: [
+          {
+            indexed: true,
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            indexed: false,
+            internalType: "bool",
+            name: "active",
+            type: "bool"
+          }
+        ],
+        name: "MemoryStatusUpdated",
+        type: "event"
+      },
+      {
+        anonymous: false,
+        inputs: [
+          {
+            indexed: true,
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            indexed: true,
+            internalType: "address",
+            name: "payer",
+            type: "address"
+          },
+          {
+            indexed: true,
+            internalType: "address",
+            name: "owner",
+            type: "address"
+          },
+          {
+            indexed: false,
+            internalType: "uint256",
+            name: "amount",
+            type: "uint256"
+          }
+        ],
+        name: "PaymentReceived",
+        type: "event"
+      },
+      {
+        inputs: [
+          {
+            internalType: "uint256",
+            name: "",
+            type: "uint256"
+          }
+        ],
+        name: "allMemoryIds",
+        outputs: [
+          {
+            internalType: "bytes32",
+            name: "",
+            type: "bytes32"
+          }
+        ],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            internalType: "string",
+            name: "metadataURI",
+            type: "string"
+          },
+          {
+            internalType: "uint256",
+            name: "accessFee",
+            type: "uint256"
+          }
+        ],
+        name: "createMemory",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          }
+        ],
+        name: "getMemory",
+        outputs: [
+          {
+            components: [
+              {
+                internalType: "bytes32",
+                name: "id",
+                type: "bytes32"
+              },
+              {
+                internalType: "address",
+                name: "owner",
+                type: "address"
+              },
+              {
+                internalType: "string",
+                name: "metadataURI",
+                type: "string"
+              },
+              {
+                internalType: "uint256",
+                name: "accessFee",
+                type: "uint256"
+              },
+              {
+                internalType: "uint256",
+                name: "createdAt",
+                type: "uint256"
+              },
+              {
+                internalType: "bool",
+                name: "active",
+                type: "bool"
+              }
+            ],
+            internalType: "struct AuraConnect.MemoryRecord",
+            name: "",
+            type: "tuple"
+          }
+        ],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "address",
+            name: "user",
+            type: "address"
+          }
+        ],
+        name: "getUserMemories",
+        outputs: [
+          {
+            internalType: "bytes32[]",
+            name: "",
+            type: "bytes32[]"
+          }
+        ],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            internalType: "address",
+            name: "consumer",
+            type: "address"
+          }
+        ],
+        name: "grantAccess",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            internalType: "address",
+            name: "consumer",
+            type: "address"
+          }
+        ],
+        name: "hasAccess",
+        outputs: [
+          {
+            internalType: "bool",
+            name: "",
+            type: "bool"
+          }
+        ],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "bytes32",
+            name: "",
+            type: "bytes32"
+          }
+        ],
+        name: "memories",
+        outputs: [
+          {
+            internalType: "bytes32",
+            name: "id",
+            type: "bytes32"
+          },
+          {
+            internalType: "address",
+            name: "owner",
+            type: "address"
+          },
+          {
+            internalType: "string",
+            name: "metadataURI",
+            type: "string"
+          },
+          {
+            internalType: "uint256",
+            name: "accessFee",
+            type: "uint256"
+          },
+          {
+            internalType: "uint256",
+            name: "createdAt",
+            type: "uint256"
+          },
+          {
+            internalType: "bool",
+            name: "active",
+            type: "bool"
+          }
+        ],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          }
+        ],
+        name: "payForAccess",
+        outputs: [],
+        stateMutability: "payable",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "bytes32",
+            name: "",
+            type: "bytes32"
+          },
+          {
+            internalType: "address",
+            name: "",
+            type: "address"
+          }
+        ],
+        name: "permissions",
+        outputs: [
+          {
+            internalType: "bool",
+            name: "",
+            type: "bool"
+          }
+        ],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [
+          {
+            internalType: "bytes32",
+            name: "memoryId",
+            type: "bytes32"
+          },
+          {
+            internalType: "address",
+            name: "consumer",
+            type: "address"
+          }
+        ],
+        name: "revokeAccess",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function"
+      },
+      {
+        inputs: [],
+        name: "totalMemoriesCount",
+        outputs: [
+          {
+            internalType: "uint256",
+            name: "",
+            type: "uint256"
+          }
+        ],
+        stateMutability: "view",
+        type: "function"
+      }
+    ],
+    bytecode: "0x6080604052348015600e575f5ffd5b506110e38061001c5f395ff3fe60806040526004361061009a575f3560e01c806383177db31161006257806383177db31461019a5780638d53b208146101b9578063a75ab044146101d8578063d26aa04e146101f6578063d42d30fa14610215578063f9e3aa2214610234575f5ffd5b80631d24eff41461009e5780632358168c146100d35780633ec50c6c146100ff57806340554c3a1461014857806374e12a8614610169575b5f5ffd5b3480156100a9575f5ffd5b506100bd6100b8366004610c74565b610247565b6040516100ca9190610cb9565b60405180910390f35b3480156100de575f5ffd5b506100f26100ed366004610d37565b6103e2565b6040516100ca9190610d57565b34801561010a575f5ffd5b50610138610119366004610d99565b600160209081525f928352604080842090915290825290205460ff1681565b60405190151581526020016100ca565b348015610153575f5ffd5b50610167610162366004610d99565b61044b565b005b348015610174575f5ffd5b50610188610183366004610c74565b610508565b6040516100ca96959493929190610dc3565b3480156101a5575f5ffd5b506101386101b4366004610d99565b6105d1565b3480156101c4575f5ffd5b506101676101d3366004610d99565b610629565b3480156101e3575f5ffd5b506003545b6040519081526020016100ca565b348015610201575f5ffd5b506101e8610210366004610c74565b610749565b348015610220575f5ffd5b5061016761022f366004610e0c565b610768565b610167610242366004610c74565b6109fa565b6102866040518060c001604052805f81526020015f6001600160a01b03168152602001606081526020015f81526020015f81526020015f151581525090565b5f828152602081905260409020600101546001600160a01b03166102f15760405162461bcd60e51b815260206004820152601d60248201527f41757261436f6e6e6563743a206d656d6f7279206e6f7420666f756e6400000060448201526064015b60405180910390fd5b5f8281526020818152604091829020825160c0810184528154815260018201546001600160a01b031692810192909252600281018054929391929184019161033890610e8a565b80601f016020809104026020016040519081016040528092919081815260200182805461036490610e8a565b80156103af5780601f10610386576101008083540402835291602001916103af565b820191905f5260205f20905b81548152906001019060200180831161039257829003601f168201915b5050509183525050600382015460208201526004820154604082015260059091015460ff16151560609091015292915050565b6001600160a01b0381165f9081526002602090815260409182902080548351818402810184019094528084526060939283018282801561043f57602002820191905f5260205f20905b81548152602001906001019080831161042b575b50505050509050919050565b5f8281526020819052604090206001015482906001600160a01b031633146104855760405162461bcd60e51b81526004016102e890610ec2565b6001600160a01b0382166104ab5760405162461bcd60e51b81526004016102e890610f09565b5f8381526001602081815260408084206001600160a01b0387168086529252808420805460ff19169093179092559051339286917f7aeffe35f64b55a7c424c5fccc3fba0f3ac4ebd764cc737855b8734834458f2b9190a4505050565b5f6020819052908152604090208054600182015460028301805492936001600160a01b039092169261053990610e8a565b80601f016020809104026020016040519081016040528092919081815260200182805461056590610e8a565b80156105b05780601f10610587576101008083540402835291602001916105b0565b820191905f5260205f20905b81548152906001019060200180831161059357829003601f168201915b50505050600383015460048401546005909401549293909290915060ff1686565b5f828152602081905260408120600101546001600160a01b038084169116036105fc57506001610623565b505f8281526001602090815260408083206001600160a01b038516845290915290205460ff165b92915050565b5f8281526020819052604090206001015482906001600160a01b031633146106635760405162461bcd60e51b81526004016102e890610ec2565b6001600160a01b0382166106895760405162461bcd60e51b81526004016102e890610f09565b336001600160a01b038316036106f15760405162461bcd60e51b815260206004820152602760248201527f41757261436f6e6e6563743a2063616e6e6f74207265766f6b65206f776e65726044820152662061636365737360c81b60648201526084016102e8565b5f8381526001602090815260408083206001600160a01b0386168085529252808320805460ff1916905551339286917ffab19bdeacf1ea13315b1da3f79a3403fe4f16793b6a03eeff9e0bbbea24fe5f9190a4505050565b60038181548110610758575f80fd5b5f91825260209091200154905081565b836107b55760405162461bcd60e51b815260206004820152601d60248201527f41757261436f6e6e6563743a20696e76616c6964206d656d6f7279496400000060448201526064016102e8565b5f848152602081905260409020600101546001600160a01b0316156108275760405162461bcd60e51b815260206004820152602260248201527f41757261436f6e6e6563743a206d656d6f727920616c72656164792065786973604482015261747360f01b60648201526084016102e8565b5f6040518060c00160405280868152602001336001600160a01b0316815260200185858080601f0160208091040260200160405190810160405280939291908181526020018383808284375f9201829052509385525050506020808301869052426040808501919091526001606090940184905289835282825291829020845181559084015192810180546001600160a01b0319166001600160a01b0390941693909317909255820151919250829160028201906108e59082610fb9565b5060608201516003808301919091556080830151600483015560a0909201516005909101805491151560ff19928316179055335f818152600260209081526040808320805460018181018355918552838520018c905586548082019097557fc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b9096018b90558a8352858252808320848452909152908190208054909316909317909155905186907f16a31f846a6716f99a069cde7122c8954a81ee0961dc968253448850f8018ead906109bd90869089908990611078565b60405180910390a36040513390819087907f7aeffe35f64b55a7c424c5fccc3fba0f3ac4ebd764cc737855b8734834458f2b905f90a45050505050565b5f81815260208190526040902060018101546001600160a01b0316610a6c5760405162461bcd60e51b815260206004820152602260248201527f41757261436f6e6e6563743a206d656d6f727920646f6573206e6f74206578696044820152611cdd60f21b60648201526084016102e8565b600581015460ff16610ac05760405162461bcd60e51b815260206004820152601f60248201527f41757261436f6e6e6563743a206d656d6f727920697320696e6163746976650060448201526064016102e8565b8060030154341015610b1e5760405162461bcd60e51b815260206004820152602160248201527f41757261436f6e6e6563743a20696e73756666696369656e74207061796d656e6044820152601d60fa1b60648201526084016102e8565b5f828152600160208181526040808420338552909152909120805460ff191690911790553415610bfa5760018101546040515f916001600160a01b03169034908381818185875af1925050503d805f8114610b94576040519150601f19603f3d011682016040523d82523d5f602084013e610b99565b606091505b5050905080610bf85760405162461bcd60e51b815260206004820152602560248201527f41757261436f6e6e6563743a207472616e7366657220746f206f776e65722066604482015264185a5b195960da1b60648201526084016102e8565b505b60018101546040513481526001600160a01b0390911690339084907f1c517e85acdede9b6dbdaab4925d20d3551f2961e9a860e72658e1769f1503229060200160405180910390a46040513390819084907f7aeffe35f64b55a7c424c5fccc3fba0f3ac4ebd764cc737855b8734834458f2b905f90a45050565b5f60208284031215610c84575f5ffd5b5035919050565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b602081528151602082015260018060a01b0360208301511660408201525f604083015160c06060840152610cf060e0840182610c8b565b905060608401516080840152608084015160a084015260a0840151151560c08401528091505092915050565b80356001600160a01b0381168114610d32575f5ffd5b919050565b5f60208284031215610d47575f5ffd5b610d5082610d1c565b9392505050565b602080825282518282018190525f918401906040840190835b81811015610d8e578351835260209384019390920191600101610d70565b509095945050505050565b5f5f60408385031215610daa575f5ffd5b82359150610dba60208401610d1c565b90509250929050565b8681526001600160a01b038616602082015260c0604082018190525f90610dec90830187610c8b565b6060830195909552506080810192909252151560a0909101529392505050565b5f5f5f5f60608587031215610e1f575f5ffd5b84359350602085013567ffffffffffffffff811115610e3c575f5ffd5b8501601f81018713610e4c575f5ffd5b803567ffffffffffffffff811115610e62575f5ffd5b876020828401011115610e73575f5ffd5b949760209190910196509394604001359392505050565b600181811c90821680610e9e57607f821691505b602082108103610ebc57634e487b7160e01b5f52602260045260245ffd5b50919050565b60208082526027908201527f41757261436f6e6e6563743a2063616c6c6572206973206e6f74206d656d6f726040820152663c9037bbb732b960c91b606082015260800190565b60208082526025908201527f41757261436f6e6e6563743a20696e76616c696420636f6e73756d6572206164604082015264647265737360d81b606082015260800190565b634e487b7160e01b5f52604160045260245ffd5b601f821115610fb45782821115610fb457805f5260205f20601f840160051c6020851015610f8d57505f5b90810190601f840160051c035f5b81811015610fb0575f83820155600101610f9b565b5050505b505050565b815167ffffffffffffffff811115610fd357610fd3610f4e565b610fe781610fe18454610e8a565b84610f62565b6020601f821160018114611019575f83156110025750848201515b5f19600385901b1c1916600184901b178455611071565b5f84815260208120601f198516915b828110156110485787850151825560209485019460019092019101611028565b508482101561106557868401515f19600387901b60f8161c191681555b505060018360011b0184555b5050505050565b83815260406020820152816040820152818360608301375f818301606090810191909152601f909201601f191601019291505056fea2646970667358221220526efc35bb1c3f11ee8611560da7982b16964938eca3f1ef99b6827c93678f4e64736f6c63430008240033",
+    compilerVersion: "0.8.28",
+    compiledAt: "2026-08-22T06:29:33.351Z"
+  };
+
   // extension/src/web3-client.ts
-  var CONTRACT_ADDRESS = "0x9A48F9c7A6E469bFe351E772877a5b3a8863f695";
+  var DEFAULT_CONTRACT_ADDRESS = getAddress("0x9A48F9c7A6E469BFE351e772877A5B3A8863f695");
+  var ACTIVE_CONTRACT_ADDRESS = DEFAULT_CONTRACT_ADDRESS;
   var MONAD_CHAIN_ID_HEX = "0x279f";
   var MONAD_CHAIN_ID_DEC = 10143;
   var MONAD_RPC_URL = "https://testnet-rpc.monad.xyz";
@@ -18014,6 +18429,13 @@ ${prettyStateOverride(stateOverride)}`;
     chain: monadTestnet,
     transport: http(MONAD_RPC_URL)
   });
+  function setActiveContractAddress(addr) {
+    try {
+      ACTIVE_CONTRACT_ADDRESS = getAddress(addr);
+    } catch (e) {
+      ACTIVE_CONTRACT_ADDRESS = DEFAULT_CONTRACT_ADDRESS;
+    }
+  }
   async function sendProviderRequest(args) {
     if (typeof window !== "undefined" && window.ethereum && !window.ethereum.__isExtensionBridge) {
       try {
@@ -18043,23 +18465,6 @@ ${prettyStateOverride(stateOverride)}`;
           if (webTab && webTab.id) {
             targetTabId = webTab.id;
           }
-        } catch (e) {
-        }
-      }
-      if (!targetTabId) {
-        try {
-          const newTab = await chrome.tabs.create({ url: "https://chatgpt.com", active: true });
-          targetTabId = newTab.id;
-          await new Promise((resolve) => {
-            const listener = (tabId, info) => {
-              if (tabId === targetTabId && info.status === "complete") {
-                chrome.tabs.onUpdated.removeListener(listener);
-                setTimeout(resolve, 800);
-              }
-            };
-            chrome.tabs.onUpdated.addListener(listener);
-            setTimeout(resolve, 3e3);
-          });
         } catch (e) {
         }
       }
@@ -18107,21 +18512,22 @@ ${prettyStateOverride(stateOverride)}`;
           target: { tabId: targetTabId },
           world: "MAIN",
           func: async (rpcPayload) => {
-            const findProvider = async () => {
+            const findProvider = () => {
               const w = window;
               if (w.ethereum) return w.ethereum;
               if (w.rabby) return w.rabby;
               if (w.phantom?.ethereum) return w.phantom.ethereum;
               if (w.coinbaseWalletExtension) return w.coinbaseWalletExtension;
-              for (let i = 0; i < 4; i++) {
-                await new Promise((r) => setTimeout(r, 200));
-                if (w.ethereum) return w.ethereum;
-                if (w.rabby) return w.rabby;
-                if (w.phantom?.ethereum) return w.phantom.ethereum;
-              }
               return null;
             };
-            const eth = await findProvider();
+            let eth = findProvider();
+            if (!eth) {
+              for (let i = 0; i < 4; i++) {
+                await new Promise((r) => setTimeout(r, 150));
+                eth = findProvider();
+                if (eth) break;
+              }
+            }
             if (!eth) {
               return { error: "METAMASK_NOT_DETECTED" };
             }
@@ -18156,22 +18562,11 @@ ${prettyStateOverride(stateOverride)}`;
     }
     throw new Error("No Web3 wallet provider available.");
   }
-  async function isWalletDetected() {
-    try {
-      const chainId = await sendProviderRequest({ method: "eth_chainId" });
-      return Boolean(chainId);
-    } catch (err) {
-      if (err.message && err.message.includes("not detected")) {
-        return false;
-      }
-      return false;
-    }
-  }
   async function getConnectedAccount() {
     try {
       const accounts = await sendProviderRequest({ method: "eth_accounts" });
       if (accounts && accounts.length > 0 && accounts[0]) {
-        return accounts[0];
+        return getAddress(accounts[0]);
       }
       return null;
     } catch (err) {
@@ -18184,6 +18579,25 @@ ${prettyStateOverride(stateOverride)}`;
       return parseInt(hex, 16);
     } catch (err) {
       return 0;
+    }
+  }
+  async function getWalletBalance(addr) {
+    try {
+      const wei = await publicClient.getBalance({ address: addr });
+      return {
+        wei,
+        formatted: Number(formatEther2(wei)).toFixed(4)
+      };
+    } catch (e) {
+      return { wei: 0n, formatted: "0.0000" };
+    }
+  }
+  async function checkContractDeployed(addr = ACTIVE_CONTRACT_ADDRESS) {
+    try {
+      const code = await publicClient.getBytecode({ address: addr });
+      return Boolean(code && code.length > 2);
+    } catch (e) {
+      return false;
     }
   }
   async function ensureMonadNetwork() {
@@ -18228,7 +18642,35 @@ ${prettyStateOverride(stateOverride)}`;
     if (!accounts || !accounts[0]) {
       throw new Error("Wallet connection was rejected.");
     }
-    return accounts[0];
+    return getAddress(accounts[0]);
+  }
+  async function deployAuraConnectContract() {
+    const from16 = await connectUserWallet();
+    await ensureMonadNetwork();
+    console.log(`[AURA] Deploying AuraConnect from ${from16}...`);
+    const txHash = await sendProviderRequest({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          from: from16,
+          data: AuraConnect_default.bytecode,
+          gas: "0x16E360"
+          // 1,500,000 gas limit for deployment
+        }
+      ]
+    });
+    console.log(`[AURA] Deploy tx submitted: ${txHash}. Waiting for confirmation...`);
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash,
+      confirmations: 1,
+      timeout: 6e4
+    });
+    if (!receipt.contractAddress) {
+      throw new Error("Deployment completed but no contract address returned.");
+    }
+    const deployedAddr = getAddress(receipt.contractAddress);
+    setActiveContractAddress(deployedAddr);
+    return { contractAddress: deployedAddr, hash: txHash };
   }
   async function executeCreateMemoryOnChain(memoryId, metadataURI, accessFeeMon = "0.0001") {
     const from16 = await connectUserWallet();
@@ -18239,16 +18681,44 @@ ${prettyStateOverride(stateOverride)}`;
       functionName: "createMemory",
       args: [memoryId, metadataURI, feeWei]
     });
-    console.log(`[AURA] Sending createMemory tx from ${from16}...`);
+    let gasLimit = 65000n;
+    try {
+      const estimated = await publicClient.estimateGas({
+        account: from16,
+        to: ACTIVE_CONTRACT_ADDRESS,
+        data: calldata
+      });
+      gasLimit = estimated + estimated / 10n;
+    } catch (e) {
+      gasLimit = 65000n;
+    }
+    const gasPrice = await publicClient.getGasPrice();
+    const balance = await publicClient.getBalance({ address: from16 });
+    const totalCost = gasLimit * gasPrice;
+    console.log("==========================================");
+    console.log("[AURA DEBUG] Transaction Pre-flight:");
+    console.log("Wallet:", from16);
+    console.log("Balance:", formatEther2(balance), "MON");
+    console.log("Chain ID:", MONAD_CHAIN_ID_DEC);
+    console.log("Contract:", ACTIVE_CONTRACT_ADDRESS);
+    console.log("Function: createMemory");
+    console.log("Gas Limit:", gasLimit.toString());
+    console.log("Gas Price:", formatGwei2(gasPrice), "Gwei");
+    console.log("Estimated Gas Fee:", formatEther2(totalCost), "MON");
+    console.log("==========================================");
+    if (balance < totalCost) {
+      throw new Error(
+        `Insufficient MON for gas fee. Required: ~${formatEther2(totalCost)} MON, Balance: ${formatEther2(balance)} MON. Claim testnet tokens at testnet.monad.xyz`
+      );
+    }
     const txHash = await sendProviderRequest({
       method: "eth_sendTransaction",
       params: [
         {
           from: from16,
-          to: CONTRACT_ADDRESS,
+          to: ACTIVE_CONTRACT_ADDRESS,
           data: calldata,
-          gas: "0x3D090"
-          // 250k gas limit
+          gas: `0x${gasLimit.toString(16)}`
         }
       ]
     });
@@ -18272,17 +18742,47 @@ ${prettyStateOverride(stateOverride)}`;
       functionName: "payForAccess",
       args: [memoryId]
     });
-    console.log(`[AURA] Sending payForAccess tx from ${from16} for 0.0001 MON...`);
+    let gasLimit = 48000n;
+    try {
+      const estimated = await publicClient.estimateGas({
+        account: from16,
+        to: ACTIVE_CONTRACT_ADDRESS,
+        data: calldata,
+        value: feeWei
+      });
+      gasLimit = estimated + estimated / 10n;
+    } catch (e) {
+      gasLimit = 48000n;
+    }
+    const gasPrice = await publicClient.getGasPrice();
+    const balance = await publicClient.getBalance({ address: from16 });
+    const totalCost = feeWei + gasLimit * gasPrice;
+    console.log("==========================================");
+    console.log("[AURA DEBUG] payForAccess Pre-flight:");
+    console.log("Wallet:", from16);
+    console.log("Balance:", formatEther2(balance), "MON");
+    console.log("Chain ID:", MONAD_CHAIN_ID_DEC);
+    console.log("Contract:", ACTIVE_CONTRACT_ADDRESS);
+    console.log("Function: payForAccess");
+    console.log("Value:", feeMon, "MON");
+    console.log("Gas Limit:", gasLimit.toString());
+    console.log("Gas Price:", formatGwei2(gasPrice), "Gwei");
+    console.log("Estimated Total Cost:", formatEther2(totalCost), "MON");
+    console.log("==========================================");
+    if (balance < totalCost) {
+      throw new Error(
+        `Insufficient MON for access fee + gas. Required: ~${formatEther2(totalCost)} MON, Balance: ${formatEther2(balance)} MON. Claim testnet tokens at testnet.monad.xyz`
+      );
+    }
     const txHash = await sendProviderRequest({
       method: "eth_sendTransaction",
       params: [
         {
           from: from16,
-          to: CONTRACT_ADDRESS,
+          to: ACTIVE_CONTRACT_ADDRESS,
           data: calldata,
           value: `0x${feeWei.toString(16)}`,
-          gas: "0x249F0"
-          // 150k gas limit
+          gas: `0x${gasLimit.toString(16)}`
         }
       ]
     });
@@ -18307,16 +18807,42 @@ ${prettyStateOverride(stateOverride)}`;
       functionName: "revokeAccess",
       args: [memoryId, consumerAddress]
     });
-    console.log(`[AURA] Sending revokeAccess for consumer ${consumerAddress}...`);
+    let gasLimit = 38000n;
+    try {
+      const estimated = await publicClient.estimateGas({
+        account: from16,
+        to: ACTIVE_CONTRACT_ADDRESS,
+        data: calldata
+      });
+      gasLimit = estimated + estimated / 10n;
+    } catch (e) {
+      gasLimit = 38000n;
+    }
+    const gasPrice = await publicClient.getGasPrice();
+    const balance = await publicClient.getBalance({ address: from16 });
+    const totalCost = gasLimit * gasPrice;
+    console.log("==========================================");
+    console.log("[AURA DEBUG] revokeAccess Pre-flight:");
+    console.log("Wallet:", from16);
+    console.log("Balance:", formatEther2(balance), "MON");
+    console.log("Contract:", ACTIVE_CONTRACT_ADDRESS);
+    console.log("Consumer to Revoke:", consumerAddress);
+    console.log("Gas Limit:", gasLimit.toString());
+    console.log("Estimated Gas Fee:", formatEther2(totalCost), "MON");
+    console.log("==========================================");
+    if (balance < totalCost) {
+      throw new Error(
+        `Insufficient MON for gas fee. Required: ~${formatEther2(totalCost)} MON, Balance: ${formatEther2(balance)} MON.`
+      );
+    }
     const txHash = await sendProviderRequest({
       method: "eth_sendTransaction",
       params: [
         {
           from: from16,
-          to: CONTRACT_ADDRESS,
+          to: ACTIVE_CONTRACT_ADDRESS,
           data: calldata,
-          gas: "0x186A0"
-          // 100k gas limit
+          gas: `0x${gasLimit.toString(16)}`
         }
       ]
     });
@@ -18334,21 +18860,20 @@ ${prettyStateOverride(stateOverride)}`;
   async function checkHasAccessOnChain(memoryId, consumerAddress) {
     try {
       const hasAccess = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
+        address: ACTIVE_CONTRACT_ADDRESS,
         abi: AuraConnectABI,
         functionName: "hasAccess",
         args: [memoryId, consumerAddress]
       });
       return Boolean(hasAccess);
     } catch (err) {
-      console.error("[AURA] hasAccess query error:", err);
       return false;
     }
   }
   async function getMemoryRecordOnChain(memoryId) {
     try {
       const record = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
+        address: ACTIVE_CONTRACT_ADDRESS,
         abi: AuraConnectABI,
         functionName: "getMemory",
         args: [memoryId]
@@ -18362,9 +18887,11 @@ ${prettyStateOverride(stateOverride)}`;
     window.AuraWeb3 = {
       publicClient,
       sendProviderRequest,
-      isWalletDetected,
       getConnectedAccount,
       getCurrentChainId,
+      getWalletBalance,
+      checkContractDeployed,
+      deployAuraConnectContract,
       ensureMonadNetwork,
       connectUserWallet,
       executeCreateMemoryOnChain,
@@ -18372,7 +18899,9 @@ ${prettyStateOverride(stateOverride)}`;
       executeRevokeAccessOnChain,
       checkHasAccessOnChain,
       getMemoryRecordOnChain,
-      CONTRACT_ADDRESS,
+      setActiveContractAddress,
+      DEFAULT_CONTRACT_ADDRESS,
+      ACTIVE_CONTRACT_ADDRESS,
       MONAD_CHAIN_ID_DEC,
       MONAD_EXPLORER_URL,
       keccak256,
