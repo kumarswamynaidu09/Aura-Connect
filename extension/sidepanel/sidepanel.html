@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA CONNECT</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <!-- ================= 3-STEP FIRST-RUN ONBOARDING MODAL ================= -->
+  <div id="onboarding-overlay" class="onboarding-modal" style="display: none;">
+    <!-- Step 1: Introduction -->
+    <div id="onboard-step-1" class="onboard-step active">
+      <div class="onboard-badge">✦ Welcome to AURA</div>
+      <div class="onboard-hero-glyph">🧠</div>
+      <h1 class="onboard-title">AURA CONNECT</h1>
+      <p class="onboard-tagline">Your context. Across your AI.</p>
+      <p class="onboard-description">
+        AURA helps you carry useful context (like your tech stack, project goals, and preferences) between AI apps while keeping you in complete control.
+      </p>
+      <button id="btn-onboard-step1-next" class="btn-primary-block">Continue →</button>
+    </div>
+
+    <!-- Step 2: How It Works -->
+    <div id="onboard-step-2" class="onboard-step">
+      <div class="onboard-badge">✦ The Mental Model</div>
+      <h1 class="onboard-title">How AURA Works</h1>
+      <p class="onboard-sub-text">You teach AURA once, and your context travels with you.</p>
+      
+      <div class="model-cards">
+        <div class="model-card">
+          <div class="model-icon">🧠</div>
+          <div class="model-text">
+            <strong>Save</strong>
+            <span>Keep useful things you want your AI to remember.</span>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-icon">🔐</div>
+          <div class="model-text">
+            <strong>Control</strong>
+            <span>You decide which AI apps can use your context.</span>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-icon">⚡</div>
+          <div class="model-text">
+            <strong>Carry</strong>
+            <span>Use your context seamlessly across Claude, ChatGPT, and more.</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-onboard-step2-next" class="btn-primary-block">Continue →</button>
+    </div>
+
+    <!-- Step 3: You Own Your Context -->
+    <div id="onboard-step-3" class="onboard-step">
+      <div class="onboard-badge">✦ Sovereign Ownership</div>
+      <div class="onboard-hero-glyph">🛡️</div>
+      <h1 class="onboard-title">You Own Your Context</h1>
+      <p class="onboard-description">
+        Your wallet becomes your sovereign AURA identity. Your raw context stays encrypted off-chain, while permissions and ownership are secured by the <strong>Monad EVM</strong>.
+      </p>
+
+      <div id="onboard-wallet-unconnected" class="onboard-wallet-box">
+        <button id="btn-onboard-connect-wallet" class="btn-primary-block">Connect MetaMask</button>
+      </div>
+
+      <div id="onboard-wallet-connected" class="onboard-wallet-box" style="display: none;">
+        <div class="connected-identity-pill">
+          <span class="live-indicator"></span>
+          <span id="onboard-address-label" class="font-mono">Connecting...</span>
+        </div>
+        <button id="btn-onboard-finish" class="btn-primary-block">Start using AURA →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= REVOKE CONFIRMATION MODAL ================= -->
+  <div id="revoke-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-icon-warning">⚠️</div>
+      <h3 class="modal-title">Revoke AI Access?</h3>
+      <p id="revoke-modal-description" class="modal-text">
+        Claude will no longer be able to retrieve your approved AURA context.
+      </p>
+      <div class="modal-actions">
+        <button id="btn-cancel-revoke" class="btn-secondary">Cancel</button>
+        <button id="btn-confirm-revoke" class="btn-danger">Revoke on Monad</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APPLICATION ================= -->
+  <div id="app-root" class="app-wrapper">
+    <!-- Header -->
+    <header class="navbar-header">
+      <div class="brand-cluster">
+        <div class="brand-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div>
+          <span class="brand-text">AURA CONNECT</span>
+          <span class="brand-tagline">Your AI context layer</span>
+        </div>
+      </div>
+
+      <!-- Wallet Status -->
+      <div id="wallet-identity-pill" class="wallet-identity-pill" title="Click to connect or switch wallet">
+        <span id="wallet-dot-indicator" class="pulse-dot"></span>
+        <span id="wallet-address-display" class="font-mono">Connect Wallet</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-nav">
+      <button id="tab-home-btn" class="tab-item active" data-tab="home">
+        <span class="tab-icon">✦</span>
+        <span>Home</span>
+      </button>
+      <button id="tab-vault-btn" class="tab-item" data-tab="vault">
+        <span class="tab-icon">🔐</span>
+        <span>Vault</span>
+      </button>
+      <button id="tab-settings-btn" class="tab-item" data-tab="settings">
+        <span class="tab-icon">⚙</span>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- ================= TAB 1: HOME VIEW ================= -->
+    <main id="tab-home-view" class="view-container active">
+      <!-- Mental Model Journey Banner -->
+      <div class="journey-banner">
+        <span class="journey-step">Teach AURA</span>
+        <span class="journey-arrow">→</span>
+        <span class="journey-step">Context Travels</span>
+        <span class="journey-arrow">→</span>
+        <span class="journey-step">You Control Access</span>
+      </div>
+
+      <!-- Active AI App Banner -->
+      <div class="active-app-panel">
+        <div class="active-app-lead">
+          <span class="micro-label">CURRENT AI APPLICATION</span>
+          <div class="app-status-row">
+            <h2 id="active-app-name-display" class="app-display-title">Claude</h2>
+            <span class="live-status-badge">● AURA is active</span>
+          </div>
+          <p id="active-app-explainer" class="app-explainer-text">
+            AURA can help this AI use your approved personal context.
+          </p>
+        </div>
+      </div>
+
+      <!-- Connection State: DISCONNECTED -->
+      <section id="state-card-disconnected" class="action-card state-detected" style="display: none;">
+        <div class="card-chip chip-purple">🔐 CONNECT YOUR WALLET</div>
+        <h3 class="card-title">AURA uses your wallet as your identity</h3>
+        <p class="card-explainer">
+          Connect MetaMask to own your context, authorize AI applications, and control access on Monad.
+        </p>
+        <button id="btn-connect-metamask-home" class="btn-primary">Connect MetaMask</button>
+      </section>
+
+      <!-- Connection State: WRONG NETWORK -->
+      <section id="state-card-wrong-network" class="action-card state-revoked" style="display: none;">
+        <div class="card-chip chip-red">⚠ WRONG NETWORK</div>
+        <h3 class="card-title">Monad Testnet Required</h3>
+        <p class="card-explainer">
+          AURA operates on Monad Testnet (Chain ID 10143). Switch your wallet network to continue.
+        </p>
+        <button id="btn-switch-monad-network" class="btn-danger">Switch to Monad Testnet</button>
+      </section>
+
+      <!-- Summary of Owned Context -->
+      <div class="context-summary-card">
+        <div class="summary-head">
+          <span class="summary-title">YOUR CONTEXT</span>
+          <button id="btn-quick-view-vault" class="link-action">View all →</button>
+        </div>
+        <div class="summary-count-row">
+          <span id="home-context-count-badge" class="count-badge">1 memory saved</span>
+          <span class="summary-note">Encrypted & user-owned</span>
+        </div>
+        <p id="home-context-preview" class="summary-snippet">
+          React & TypeScript • Minimalist interface preferences
+        </p>
+      </div>
+
+      <!-- ================= DYNAMIC ACTION STATES ================= -->
+
+      <!-- STATE A: CONTEXT DETECTED (Save to AURA) -->
+      <section id="state-card-detected" class="action-card state-detected">
+        <div class="card-chip chip-purple">🧠 AURA FOUND SOMETHING USEFUL</div>
+        <h3 class="card-title">You mentioned a key preference</h3>
+        <blockquote id="detected-quote-text" class="quote-box">
+          "I build with React and TypeScript and prefer minimal interfaces."
+        </blockquote>
+        <p class="card-explainer">
+          Saving this helps other AI apps personalize their answers to your preferred stack.
+        </p>
+        <div class="action-btn-row">
+          <button id="btn-action-save-context" class="btn-primary">Save to AURA</button>
+          <button id="btn-action-ignore-context" class="btn-ghost">Not now</button>
+        </div>
+      </section>
+
+      <!-- STATE B: CONTEXT REQUEST (Allow & Unlock 0.0001 MON) -->
+      <section id="state-card-request" class="action-card state-request" style="display: none;">
+        <div class="card-chip chip-cyan">⚡ CONTEXT REQUEST</div>
+        <h3 class="card-title"><span id="request-target-app">Claude</span> wants to use your context</h3>
+        
+        <div class="request-reason-box">
+          <strong>WHY?</strong>
+          <p>To write components and code strictly formatted for your React + TypeScript stack.</p>
+        </div>
+
+        <div class="requested-items-list">
+          <div class="item-bullet">✓ React & TypeScript preferences</div>
+          <div class="item-bullet">✓ Minimalist UI guidelines</div>
+        </div>
+
+        <div class="access-fee-card">
+          <div>
+            <div class="fee-label">One-Time Access Fee</div>
+            <div class="fee-sub">Goes directly to your context protocol balance</div>
+          </div>
+          <div class="fee-val-tag">0.0001 MON</div>
+        </div>
+
+        <p class="security-reassurance">
+          🔒 You stay in complete control and can revoke access anytime in your Vault.
+        </p>
+
+        <div class="action-btn-row">
+          <button id="btn-action-allow-unlock" class="btn-cyan">Allow & Unlock (0.0001 MON)</button>
+          <button id="btn-action-dismiss-request" class="btn-ghost">Not now</button>
+        </div>
+      </section>
+
+      <!-- STATE C: CONTEXT ACTIVE & INJECTABLE -->
+      <section id="state-card-active" class="action-card state-active" style="display: none;">
+        <div class="card-chip chip-emerald">✓ CONTEXT SHARED</div>
+        <h3 class="card-title"><span id="active-target-app">Claude</span> can now use your context</h3>
+        <p class="card-explainer">
+          Your approved technical preferences are authenticated on Monad and ready to be used.
+        </p>
+        <button id="btn-action-inject-context" class="btn-emerald">
+          <span>🚀 Apply Context to AI Prompt</span>
+        </button>
+      </section>
+
+      <!-- STATE D: ACCESS REVOKED -->
+      <section id="state-card-revoked" class="action-card state-revoked" style="display: none;">
+        <div class="card-chip chip-red">🔒 ACCESS REVOKED</div>
+        <h3 class="card-title">Context access is blocked</h3>
+        <p class="card-explainer">
+          This AI application no longer has permission to retrieve your AURA context. Your data is protected.
+        </p>
+        <button id="btn-action-reopen-vault" class="btn-ghost">Manage in Vault →</button>
+      </section>
+
+      <!-- STATE E: ALL CAUGHT UP -->
+      <section id="state-card-idle" class="idle-placeholder" style="display: none;">
+        <div class="idle-glyph">✦</div>
+        <h3 class="idle-title">You're all caught up</h3>
+        <p class="idle-desc">
+          AURA is actively protecting your context. As you chat, new preferences and access requests will appear here.
+        </p>
+      </section>
+
+      <!-- Transaction Status Banner -->
+      <div id="tx-progress-banner" class="tx-progress-banner" style="display: none;">
+        <div class="spinner-ring"></div>
+        <div class="tx-text-col">
+          <div id="tx-banner-message" class="tx-banner-title">Processing on Monad...</div>
+          <a id="tx-banner-explorer-link" href="#" target="_blank" class="tx-explorer-url">View transaction on MonadScan ↗</a>
+        </div>
+      </div>
+    </main>
+
+    <!-- ================= TAB 2: VAULT VIEW ================= -->
+    <main id="tab-vault-view" class="view-container">
+      <!-- Vault Hero -->
+      <div class="vault-header-hero">
+        <div>
+          <span class="micro-label">YOUR SOVEREIGN AURA</span>
+          <div id="vault-wallet-id" class="vault-identity-text">Not Connected</div>
+          <p class="vault-caption">See what AURA remembers about you and control who can access it.</p>
+        </div>
+        <div class="monad-secured-tag">✓ Secured by Monad</div>
+      </div>
+
+      <!-- Context Section -->
+      <section class="vault-group">
+        <div class="group-header">
+          <div>
+            <span class="group-title">YOUR CONTEXT</span>
+            <span class="group-subtitle">Things AURA remembers for you</span>
+          </div>
+          <span class="encrypted-badge">Encrypted Off-Chain</span>
+        </div>
+
+        <div id="vault-memories-list" class="cards-stack">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- Applications Access Control Section -->
+      <section class="vault-group">
+        <div class="group-header">
+          <div>
+            <span class="group-title">WHO CAN ACCESS YOUR CONTEXT?</span>
+            <span class="group-subtitle">AI apps you've allowed to use your context</span>
+          </div>
+          <span class="onchain-badge">On-Chain Access Control</span>
+        </div>
+
+        <div id="vault-apps-list" class="cards-stack">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- Recent Activity Log -->
+      <section class="vault-group">
+        <div class="group-header">
+          <div>
+            <span class="group-title">ACTIVITY HISTORY</span>
+            <span class="group-subtitle">Recent context events & Monad receipts</span>
+          </div>
+        </div>
+
+        <div id="vault-activity-list" class="activity-stack">
+          <div class="activity-row">
+            <span class="activity-dot dot-purple"></span>
+            <div class="activity-info">
+              <span class="activity-text">Saved Frontend & Architecture Preference</span>
+              <span class="activity-time">Today • Monad Block #129410</span>
+            </div>
+          </div>
+          <div class="activity-row">
+            <span class="activity-dot dot-cyan"></span>
+            <div class="activity-info">
+              <span class="activity-text">0.0001 MON Access Fee Confirmed for Claude</span>
+              <span class="activity-time">Today • Monad Verified</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ================= TAB 3: SETTINGS VIEW ================= -->
+    <main id="tab-settings-view" class="view-container">
+      <!-- Network Section -->
+      <div class="settings-card">
+        <div class="settings-card-head">NETWORK & PROTOCOL</div>
+        <div class="settings-entry">
+          <span class="entry-label">Blockchain</span>
+          <span class="entry-val text-emerald">● Monad Testnet</span>
+        </div>
+        <div class="settings-entry">
+          <span class="entry-label">Smart Contract</span>
+          <a href="https://testnet.monadscan.com/address/0x9A48F9c7A6E469bFe351E772877a5b3a8863f695" target="_blank" class="entry-link">0x9A48...f695 ↗</a>
+        </div>
+      </div>
+
+      <!-- Privacy & Storage Section -->
+      <div class="settings-card">
+        <div class="settings-card-head">PRIVACY & CONTROL</div>
+        <p class="settings-caption">
+          Raw context is never stored on the public blockchain. Only cryptographic ownership identifiers, hashes, and access permissions reside on Monad.
+        </p>
+        <button id="btn-replay-tutorial" class="settings-action-btn">Replay Guided Onboarding</button>
+        <button id="btn-reset-cache" class="settings-action-btn text-danger">Reset Local Storage</button>
+      </div>
+
+      <!-- Developer Mode (Hidden by default) -->
+      <div class="settings-card">
+        <div class="settings-card-head">ADVANCED</div>
+        <div class="settings-entry">
+          <span class="entry-label">Developer Testing Mode</span>
+          <label class="switch">
+            <input type="checkbox" id="toggle-developer-mode">
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div id="dev-tools-panel" class="dev-panel" style="display: none;">
+          <div class="dev-title">Simulate Active AI Page Switch:</div>
+          <div class="dev-btn-group">
+            <button id="btn-dev-claude" class="btn-micro active">Claude</button>
+            <button id="btn-dev-chatgpt" class="btn-micro">ChatGPT</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Global Floating Toast -->
+    <div id="floating-toast" class="floating-toast" style="display: none;">
+      <span id="toast-message-label">Action completed</span>
+    </div>
+  </div>
+
+  <script src="monad-web3.bundle.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
