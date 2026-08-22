@@ -1,211 +1,251 @@
 # AURA CONNECT 🧠⚡
 
-> **"Your AI context layer that follows you across AI applications."**  
-> A Sovereign Browser Extension & Protocol powered by the **Monad High-Throughput EVM**.
+> **Your AI context layer — portable, sovereign, and chain-anchored.**  
+> A browser extension + protocol built on **Monad Testnet** that lets your AI memory travel with you across every AI application you use.
 
-[![Chrome Extension](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-4285F4.svg)](extension/)
-[![Built with Monskills](https://img.shields.io/badge/built%20with-monskills-836EF9.svg)](https://monad.xyz)
-[![Network](https://img.shields.io/badge/Network-Monad%20Testnet%20(10143)-836EF9.svg)](https://testnet.monadscan.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+<div align="center">
 
----
+[![Chrome Extension](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](extension/)
+[![Network](https://img.shields.io/badge/Monad_Testnet-Chain_10143-836EF9?style=for-the-badge)](https://testnet.monadscan.com)
+[![Contract](https://img.shields.io/badge/AuraConnect.sol-Deployed-22c55e?style=for-the-badge)](https://testnet.monadscan.com/address/0x9A48F9c7A6E469bFe351E772877a5b3a8863f695)
+[![License: MIT](https://img.shields.io/badge/License-MIT-f59e0b?style=for-the-badge)](LICENSE)
 
-### Your AI identity. Your memory. Your control.
-
-Aura Connect is a **user-owned AI identity and context layer** that allows your AI memory, preferences, and context to travel with you across different applications.
-
-Instead of teaching every AI application who you are from scratch, Aura Connect gives you a persistent AI identity anchored to your wallet that you control.
-
-Your memories stay private and encrypted off-chain. Applications can request access to specific pieces of your context, and **you decide what they can access, approve or deny requests, and revoke access whenever you want on-chain.**
-
-> **"Your AI shouldn't belong to the apps you use. It should belong to you."**
+</div>
 
 ---
 
-## 🌐 The Problem & The Breakthrough
+## What is Aura Connect?
 
-Today, every AI assistant operates in a closed data silo:
-1. **Context Fragmentation**: You repeat your tech stack, preferences, and projects to every new AI tool (ChatGPT, Claude, Cursor, v0, etc.).
-2. **Zero Ownership**: Centralized AI platforms keep your context locked in their proprietary servers.
-3. **No Portability or Sovereign Control**: You cannot permission, meter, or revoke AI access to your personal context across the web.
+Every AI tool you use — ChatGPT, Claude, Cursor, Perplexity — starts from zero. You re-explain your stack, your preferences, your projects. Every time. Your context is trapped in silos you don't own.
 
-```text
-             YOU
-              │
-      ┌───────┼────────┐
-      ▼       ▼        ▼
-   Chat AI  Code AI  Research AI
-      │       │        │
-   Memory  Memory   Memory
-      │       │        │
-      └───────┼────────┘
-              │
-          Fragmented & Siloed
+**Aura Connect breaks that loop.** It gives you a sovereign AI identity anchored to your wallet. Your memories are encrypted off-chain. Ownership is registered on Monad. Access is permissioned by you, paid for in MON, and revocable at any time — on-chain.
+
+```
+Before Aura Connect         After Aura Connect
+
+   YOU                           YOU
+    │                             │
+    ├── ChatGPT   (no context)    └── 🔐 YOUR WALLET
+    ├── Claude    (no context)          │
+    ├── Cursor    (no context)          └── AURA CONNECT
+    └── ...       (no context)               │
+                                    ┌────────┼────────┐
+                                    ▼        ▼        ▼
+                               ChatGPT   Claude   Cursor
+                               (context) (context) (context)
 ```
 
 ---
 
-## 💡 Solution: AURA CONNECT Extension & Protocol
+## The Flow in 60 Seconds
 
-**AURA CONNECT** is a **Chromium Browser Extension (Manifest V3 Side Panel)** and sovereign protocol that anchors your AI memory directly to your **Monad Wallet**:
-
-- 🌐 **Context Capture (App #1)**: Captures your engineering preferences and habits from conversations, registering ownership on Monad via `createMemory()`.
-- ⚡ **Cross-App Context Unlock (App #2)**: When visiting Claude, ChatGPT, or developer tools, AURA detects available context and unlocks it via a `0.0001 MON` micro-payment (`payForAccess()`).
-- 🚀 **1-Click Prompt Injection**: Decrypts and injects authorized context directly into the AI's prompt box on any active tab.
-- 🛡️ **AURA Vault**: Sovereign dashboard inside the extension side panel and web portal to revoke permissions on-chain (`revokeAccess()`) at any time.
-
-```text
-                         👤 YOU
-                            │
-                       🔐 YOUR WALLET
-                            │
-                            ▼
-                 ┌────────────────────┐
-                 │    AURA CONNECT    │
-                 │                    │
-                 │ 🪪 AI Identity     │
-                 │ 🧠 AI Memory       │
-                 │ 🔐 Permissions     │
-                 │ 💰 Settlement      │
-                 └─────────┬──────────┘
-                            │
-              ┌─────────────┼─────────────┐
-              ▼             ▼             ▼
-           Life AI       Code AI      Research AI
-              │             │             │
-              └─────────────┼─────────────┘
-                            │
-                      Your Context
-```
+1. **Teach App 1** — Have a conversation with any AI (e.g. ChatGPT). Express your preferences.
+2. **Save to AURA** — Click *Save Context to Monad*. Calls `createMemory()` on-chain. You own it.
+3. **Open App 2** — Navigate to Claude, Cursor, or any supported AI tool.
+4. **Pay & Unlock** — AURA detects available context. Click *Unlock (0.0001 MON)*. Calls `payForAccess()`.
+5. **Inject** — Click *🚀 Inject Context*. AURA populates the active AI's input box with your context.
+6. **Revoke anytime** — Open the AURA Vault, click *Revoke*. Calls `revokeAccess()`. App 2 is locked out.
 
 ---
 
-## 🏗️ Architecture & Interaction Flow
+## Architecture
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as User Wallet (Monad 10143)
-    participant Ext as 🧠 AURA Browser Extension (Side Panel)
-    participant App1 as 🤖 AI App #1 (e.g. ChatGPT / Life AI)
-    participant Monad as ⚡ Monad Testnet (AuraConnect.sol)
-    participant App2 as 🤖 AI App #2 (e.g. Claude AI / Code AI)
-    participant Vault as 🛡️ AURA Vault
+    actor User as 👤 User (Monad Wallet)
+    participant Ext as 🧠 AURA Extension
+    participant App1 as 🤖 AI App 1
+    participant Monad as ⚡ AuraConnect.sol
+    participant App2 as 🤖 AI App 2
 
-    User->>App1: Types preferences (React + TS + Minimal UI)
+    User->>App1: Shares preferences in conversation
     Ext->>Ext: Detects context from active tab
-    User->>Monad: createMemory() -> Ownership registered on-chain
-    
-    User->>App2: Opens 2nd AI website (Claude AI)
-    Ext->>Monad: Checks permissions -> Access Required
-    Ext-->>User: "⚡ Context Available: 0.0001 MON fee"
-    User->>Monad: payForAccess() -> 0.0001 MON paid on Monad
-    Monad-->>Ext: AccessGranted event
-    Ext->>App2: Injects authorized context into prompt box
-    App2-->>User: Tailored code response strictly using context
-    
-    User->>Vault: Opens AURA Vault
-    User->>Monad: revokeAccess() on Monad Testnet
-    Monad-->>Ext: AccessRevoked -> Context locked for App #2
+    User->>Monad: createMemory() → ownership registered
+    User->>App2: Opens second AI tool
+    Ext->>Monad: Checks permissions → access required
+    Ext-->>User: "Context available: 0.0001 MON"
+    User->>Monad: payForAccess() → MON payment sent
+    Monad-->>Ext: AccessGranted event emitted
+    Ext->>App2: Injects context into prompt box
+    User->>Monad: revokeAccess() → App 2 locked out
 ```
 
----
+### Privacy Model
 
-## 🔐 Privacy & Security: Separation of Data and State
+Your AI conversations **never go on-chain in plaintext**.
 
-Aura Connect **never puts your private AI conversations in plaintext on the blockchain.**
-
-| Layer | Component | Location | Details |
-|---|---|---|---|
-| **Off-chain** | Memory Content, Encrypted Embeddings, AI Responses | Encrypted Local/Decentralized Storage | Kept private; decrypted only in-memory when authorized |
-| **On-chain** | Memory Hash (`bytes32`), Ownership, Permissions, Payments, Revocations | Monad EVM Contract (`AuraConnect.sol`) | High-speed, low-cost verifiable permission and settlement layer |
-
----
-
-## 🌟 The North Star Demo Flow
-
-1. **Install Extension**: Load unpacked extension from `extension/` in Chrome/Brave/Edge.
-2. **Open Side Panel**: Click the AURA extension icon or extension menu to open the Side Panel.
-3. **App 1 (Context Creation)**: Discuss your stack (*"I'm building with React and TypeScript and prefer minimal interfaces"*).
-4. **Save to AURA**: Click **[ Save Context to Monad ]** → Real `createMemory()` on Monad Testnet.
-5. **App 2 (Context Discovery)**: Navigate to Claude AI, ChatGPT, or open the Test Lab in the extension.
-6. **Pay & Unlock**: Click **[ Unlock Context (0.0001 MON) ]** → Real `payForAccess()` on Monad.
-7. **Inject Context**: Click **[ 🚀 Inject Context into AI Chat ]** → Automatically populates the active chat input!
-8. **AURA Vault**: Inspect connected apps and click **[ Revoke Access ]** → Real `revokeAccess()` on Monad.
-9. **Verify Denial**: Return to App #2 → Context is locked and access is denied.
-
----
-
-## 📦 How to Load the Extension in Chrome
-
-1. Open Chrome and navigate to `chrome://extensions`.
-2. Enable **Developer mode** (toggle in the top-right corner).
-3. Click **Load unpacked**.
-4. Select the `extension` folder inside this repository:
-   ```
-   monad/extension/
-   ```
-5. Pin **AURA CONNECT** to your toolbar and click its icon to open the Side Panel!
-
----
-
-## 📜 Smart Contract: `AuraConnect.sol`
-
-- **Network**: Monad Testnet
-- **Chain ID**: `10143` (`0x279f`)
-- **RPC URL**: `https://testnet-rpc.monad.xyz`
-- **Explorer**: `https://testnet.monadscan.com`
-- **Deployed Contract Address**: `0x9A48F9c7A6E469bFe351E772877a5b3a8863f695`
-
-### Key Contract Functions
-
-| Function | Type | Description |
+| Layer | What lives here | Where |
 |---|---|---|
-| `createMemory(bytes32 memoryId, string metadataURI, uint256 accessFee)` | State Modifying | Registers new context asset on Monad under caller's wallet |
-| `payForAccess(bytes32 memoryId)` | Payable | Consumer pays access fee in MON to unlock memory; funds routed to owner |
-| `grantAccess(bytes32 memoryId, address consumer)` | State Modifying | Memory owner grants direct permission |
-| `revokeAccess(bytes32 memoryId, address consumer)` | State Modifying | Memory owner permanently revokes application permission |
-| `hasAccess(bytes32 memoryId, address consumer)` | View | Verifies active permission status on-chain |
-| `getUserMemories(address user)` | View | Returns array of memory IDs owned by address |
+| **Off-chain** | Memory content, encrypted embeddings | Encrypted local / decentralized storage |
+| **On-chain** | Memory hash (`bytes32`), ownership, permissions, payments | Monad EVM — `AuraConnect.sol` |
 
 ---
 
-## 🚀 Running the Web Dashboard (AURA Vault Portal)
+## Smart Contract
+
+**Network:** Monad Testnet · **Chain ID:** `10143` · **RPC:** `https://testnet-rpc.monad.xyz`  
+**Deployed at:** [`0x9A48F9c7A6E469bFe351E772877a5b3a8863f695`](https://testnet.monadscan.com/address/0x9A48F9c7A6E469bFe351E772877a5b3a8863f695)
+
+| Function | Type | Purpose |
+|---|---|---|
+| `createMemory(bytes32, string, uint256)` | State | Registers memory asset on Monad under caller's wallet |
+| `payForAccess(bytes32)` | Payable | Consumer pays MON fee; owner receives payment instantly |
+| `grantAccess(bytes32, address)` | State | Owner grants free access to a consumer address |
+| `revokeAccess(bytes32, address)` | State | Owner permanently locks a consumer out |
+| `hasAccess(bytes32, address)` | View | Verifies active permission status |
+| `getUserMemories(address)` | View | Returns all memory IDs owned by an address |
+
+---
+
+## Tech Stack
+
+| Layer | Technologies |
+|---|---|
+| **Extension** | Chrome Manifest V3, Side Panel API, Content Scripts, Service Worker |
+| **Blockchain** | Monad Testnet (10143), Solidity 0.8.28, Viem, Wagmi v2, RainbowKit |
+| **Web Portal** | Next.js 14 App Router, TypeScript, Tailwind CSS, Lucide Icons |
+| **Context Protocol** | Off-chain encrypted JSON → `bytes32` memory hash on Monad |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js `v18+`
+- Chrome / Brave / Edge (Manifest V3 support)
+- MetaMask or any EVM wallet with Monad Testnet configured
+- Monad Testnet MON (faucet: [faucet.monad.xyz](https://faucet.monad.xyz))
+
+### 1. Clone & Install
 
 ```bash
-# 1. Install dependencies
+git clone https://github.com/<your-username>/Aura-Connect.git
+cd Aura-Connect
 npm install
+```
 
-# 2. Compile & Test Smart Contract
-npm run compile:contract
-npm run test:contract
+### 2. Configure Environment
 
-# 3. Start Next.js Development Server
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local`:
+
+```env
+NEXT_PUBLIC_MONAD_RPC=https://testnet-rpc.monad.xyz
+NEXT_PUBLIC_CHAIN_ID=10143
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x9A48F9c7A6E469bFe351E772877a5b3a8863f695
+```
+
+### 3. Load the Chrome Extension
+
+```bash
+# (Optional) Rebuild the extension web3 bundle
+npm run build:extension
+```
+
+Then in Chrome:
+
+1. Go to `chrome://extensions`
+2. Enable **Developer mode** (toggle, top-right)
+3. Click **Load unpacked**
+4. Select the `extension/` folder in this repo
+5. Pin **AURA CONNECT** to your toolbar — click its icon to open the Side Panel
+
+### 4. Run the Web Portal (AURA Vault)
+
+```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) to view the AURA Vault web portal.
+
+Open [http://localhost:3000](http://localhost:3000) to access the AURA Vault dashboard.
+
+### 5. (Optional) Compile & Deploy Your Own Contract
+
+```bash
+npm run compile:contract
+npm run deploy:contract
+```
+
+Update `NEXT_PUBLIC_CONTRACT_ADDRESS` in `.env.local` with your new deployment address.
 
 ---
 
-## 🛠️ Tech Stack
+## Project Structure
 
-- **Browser Extension**: Manifest V3, Side Panel API, Content Scripts, Service Worker, DOM Message Relay
-- **Blockchain Layer**: Monad Testnet (Chain 10143), Solidity 0.8.28, Viem, Wagmi v2, RainbowKit
-- **Full-Stack Portal**: Next.js 14 App Router, TypeScript, Tailwind CSS, Lucide Icons
-- **Context Protocol**: Off-chain encrypted JSON storage mapped to cryptographic `bytes32` memory hashes
+```
+Aura-Connect/
+├── contracts/
+│   └── AuraConnect.sol          # Sovereign memory & permission contract
+├── extension/
+│   ├── manifest.json            # Chrome MV3 manifest
+│   ├── background.js            # Service worker — tab detection
+│   ├── content.js               # DOM injection — populates AI chat inputs
+│   ├── src/
+│   │   └── web3-client.ts       # Viem client for Monad interactions
+│   └── sidepanel/
+│       ├── sidepanel.html       # Extension side panel UI
+│       ├── sidepanel.js         # Full UI state & Web3 integration
+│       └── sidepanel.css        # Styling
+├── src/
+│   ├── app/                     # Next.js App Router pages
+│   ├── components/              # React UI components
+│   ├── config/                  # Wagmi / RainbowKit config
+│   ├── contracts/               # ABI and contract bindings
+│   └── services/                # Business logic and API services
+├── scripts/
+│   ├── compile.ts               # Solidity compiler script
+│   ├── deploy.ts                # Contract deployment script
+│   └── build-extension-web3.js  # Extension bundle builder
+├── .env.example                 # Environment variable template
+└── package.json
+```
 
 ---
 
-## 🏆 Built for Monad Blitz
+## Supported AI Platforms
 
-Aura Connect is built demonstrating one complete vision:
+Out of the box, AURA injects context into:
 
-> **A user can carry their AI identity from one application to another while retaining ownership and control.**
+- **Claude** (`claude.ai`)
+- **ChatGPT** (`chatgpt.com`, `chat.openai.com`)
+- **Perplexity** (`perplexity.ai`)
+- **Localhost** (for development / test rigs)
 
-**Connect Wallet → Teach Life AI → Save Memory → Own It → Open Code AI → Request Context → Pay MON → Use Context → Revoke Access → Access Denied.**
+To add a new platform, add its domain to `content_scripts.matches` in `extension/manifest.json` and ensure its chat input selector is handled in `content.js`.
 
 ---
 
-## 📜 License
+## Roadmap
 
-MIT License. See [LICENSE](LICENSE) for details.
+- [ ] **Encryption layer** — AES-GCM local encryption before context is stored
+- [ ] **IPFS / decentralized storage** — Replace local storage with pinned IPFS or Arweave for true decentralization
+- [ ] **Memory categories** — Separate slots for Code Preferences, Writing Style, Research Context
+- [ ] **Multi-memory paywall** — Bundle multiple memory IDs in a single `payForAccess` call
+- [ ] **Firefox / Safari port** — Extend the extension to other browsers
+- [ ] **Shared / public memories** — Opt-in discovery for context templates others can purchase
+- [ ] **Memory expiry** — Time-limited access tokens with on-chain TTL
+- [ ] **Mainnet deployment** — When Monad launches mainnet
+
+---
+
+## Contributing
+
+Pull requests are welcome. For significant changes, please open an issue first to discuss what you'd like to change.
+
+```bash
+# Run linter
+npm run lint
+
+# Test contract interactions
+npm run test:contract
+```
+
+---
+
+## License
+
+[MIT](LICENSE) — built with ❤️ for [Monad Blitz](https://monad.xyz).
