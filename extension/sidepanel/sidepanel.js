@@ -447,12 +447,52 @@ function updateHomeWorkflow() {
     } else if (claudeApp.status === "revoked") {
       cardRevoked.style.display = "flex";
     } else {
+      updateContextRequestUI();
       cardRequest.style.display = "flex";
       checkWalletFundingAndGas();
     }
   }
 
   document.getElementById("home-context-count-badge").innerText = `${ownedMemories.length} memory saved`;
+}
+
+function updateContextRequestUI() {
+  const reasonTextEl = document.getElementById("request-reason-text");
+  const itemsContainerEl = document.getElementById("request-items-container");
+  
+  if (!reasonTextEl || !itemsContainerEl) return;
+
+  if (ownedMemories.length > 0 && ownedMemories[0].content) {
+    const mem = ownedMemories[0];
+    
+    // Update reason text
+    if (mem.sourceApp === 'Shopping') {
+      reasonTextEl.innerText = "To personalize recommendations and find relevant products based on your recent shopping activity.";
+    } else {
+      reasonTextEl.innerText = "To write answers and code tailored to your exact stack and preferences learned from " + mem.sourceApp + ".";
+    }
+
+    // Update the bullet points list
+    itemsContainerEl.innerHTML = "";
+    
+    // Create a dynamic bullet based on the summary or content
+    const bulletText = mem.summary || "Encrypted context preferences";
+    const div = document.createElement("div");
+    div.className = "item-bullet";
+    div.innerText = "✓ " + bulletText;
+    itemsContainerEl.appendChild(div);
+
+    // Optionally add a second bullet if it's long
+    if (mem.content && mem.content.length > 50) {
+      const div2 = document.createElement("div");
+      div2.className = "item-bullet";
+      div2.innerText = "✓ Recent specific activity data";
+      itemsContainerEl.appendChild(div2);
+    }
+  } else {
+    reasonTextEl.innerText = "To use your previously saved context and preferences to personalize this experience.";
+    itemsContainerEl.innerHTML = '<div class="item-bullet">✓ Encrypted context preferences</div>';
+  }
 }
 
 // ================= 7. REAL BLOCKCHAIN ACTIONS =================
@@ -590,7 +630,11 @@ function initHomeActions() {
 
   // 3. Inject Context into AI Prompt
   document.getElementById("btn-action-inject-context").addEventListener("click", () => {
-    const contextSnippet = `[Context provided by Aura]:\n- Stack: React + TypeScript\n- Note: I prefer minimalist interfaces and concise code without boilerplate.`;
+    let contextSnippet = `[Context provided by Aura]:\n- Stack: React + TypeScript\n- Note: I prefer minimalist interfaces and concise code without boilerplate.`;
+    
+    if (ownedMemories.length > 0 && ownedMemories[0].content) {
+      contextSnippet = `[Context provided by Aura (from ${ownedMemories[0].sourceApp})]:\n${ownedMemories[0].content}`;
+    }
 
     try {
       if (typeof chrome !== "undefined" && chrome.tabs) {
@@ -905,6 +949,11 @@ function updateDetectedContextCard(ctx) {
     ownedMemories[0].content = ctx.lastUserMessage;
     ownedMemories[0].summary = ctx.summary.substring(0, 80);
     ownedMemories[0].sourceApp = ctx.platform;
+  }
+
+  // Update the Request card UI dynamically with the newly extracted context!
+  if (typeof updateContextRequestUI === 'function') {
+    updateContextRequestUI();
   }
 }
 
