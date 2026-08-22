@@ -67,14 +67,14 @@ export default function LandingPage() {
               </div>
               
               <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-[#F5F5F7] mb-6 leading-tight">
-                Your AI Memory. <br className="hidden md:block" />
+                Context that <br className="hidden md:block" />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF8A00] via-[#FFB000] to-[#FFD43B]">
-                  Your Control.
-                </span> Across Every App.
+                  travels with you.
+                </span>
               </h1>
               
               <p className="text-lg md:text-xl text-[#8E8E93] max-w-3xl mx-auto mb-10 leading-relaxed">
-                AURA CONNECT is a browser extension that lets you own your AI context on Monad — save what matters, carry it between ChatGPT, Claude, and any AI, and control exactly who can use it.
+                AURA is a smart context layer anchored to your Monad wallet. It quietly learns your preferences as you browse, securely stores them, and injects them seamlessly across any application you use.
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

@@ -67,15 +67,15 @@ function injectInpageBridge() {
 
 injectInpageBridge();
 
-// Detect active AI platform
-function detectAIPlatform() {
+function detectPlatform() {
   const host = window.location.hostname.toLowerCase();
   if (host.includes("chatgpt") || host.includes("openai")) return "ChatGPT";
   if (host.includes("claude")) return "Claude";
+  if (host.includes("amazon") || host.includes("ebay") || host.includes("etsy")) return "Shopping";
   if (host.includes("perplexity")) return "Perplexity";
   if (host.includes("cursor")) return "Cursor";
-  if (host.includes("localhost")) return "Local AI";
-  return "AI Assistant";
+  if (host.includes("localhost")) return "Local App";
+  return "Web App";
 }
 
 // Listen for messages from AURA Side Panel
@@ -152,11 +152,11 @@ function injectContextIntoActiveInput(contextText) {
         inputEl.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
-      showFloatingToast("⚡ AURA Context Injected into " + detectAIPlatform());
+      showFloatingToast("⚡ AURA Context Injected into " + detectPlatform());
       return true;
     } else {
       navigator.clipboard.writeText(contextText);
-      showFloatingToast("📋 Context copied to clipboard for " + detectAIPlatform());
+      showFloatingToast("📋 Context copied to clipboard for " + detectPlatform());
       return true;
     }
   } catch (err) {
@@ -193,7 +193,7 @@ function showFloatingToast(message) {
 
 // Extract conversation messages from the current AI platform
 function extractConversationContext() {
-  const platform = detectAIPlatform();
+  const platform = detectPlatform();
   let messages = [];
   
   if (platform === 'ChatGPT') {
@@ -236,6 +236,20 @@ function extractConversationContext() {
         if (text && text.length > 20) messages.push({ role: 'unknown', text: text.substring(0, 500) });
       });
     }
+  } else if (platform === 'Shopping') {
+    // Extract product titles or searches from E-commerce
+    const titleEl = document.querySelector('#productTitle, h1');
+    if (titleEl && titleEl.innerText?.trim()) {
+      messages.push({ role: 'user', text: "Looking at product: " + titleEl.innerText.trim().substring(0, 150) });
+    }
+    const searchEl = document.querySelector('input[type="text"][name*="search" i], input[type="text"][id*="search" i]');
+    if (searchEl && searchEl.value) {
+      messages.push({ role: 'user', text: "Searching for: " + searchEl.value });
+    }
+    const breadcrumbs = document.querySelector('#wayfinding-breadcrumbs_feature_div, .breadcrumb');
+    if (breadcrumbs && breadcrumbs.innerText?.trim()) {
+      messages.push({ role: 'user', text: "Category: " + breadcrumbs.innerText.replace(/\n/g, ' > ').substring(0, 100) });
+    }
   } else {
     // Generic: look for any conversation-like structure
     const blocks = document.querySelectorAll('[role="log"] > *, [class*="message"], [class*="chat"], article');
@@ -261,7 +275,7 @@ function extractUserContextSummary() {
     // Fall back to any messages
     const anyRecent = messages.slice(-3);
     return {
-      platform: detectAIPlatform(),
+      platform: detectPlatform(),
       messageCount: messages.length,
       summary: anyRecent.map(m => m.text).join(' | '),
       lastUserMessage: anyRecent.length > 0 ? anyRecent[anyRecent.length - 1].text : '',
@@ -270,7 +284,7 @@ function extractUserContextSummary() {
   }
   
   return {
-    platform: detectAIPlatform(),
+    platform: detectPlatform(),
     messageCount: messages.length,
     summary: recent.map(m => m.text).join(' | '),
     lastUserMessage: recent[recent.length - 1].text,

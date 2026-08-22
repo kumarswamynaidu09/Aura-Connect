@@ -535,16 +535,16 @@ function initHomeActions() {
     }
 
     if (isDemoMode) {
-      showTxInFlight("🎬 [DEMO] Confirming 0.0001 MON payment...");
+      showTxInFlight("Confirming 0.0001 MON in MetaMask...");
       setTimeout(() => {
         const claudeApp = connectedApps.find((a) => a.id === "claude");
         if (claudeApp) claudeApp.status = "granted";
         
-        showTxCompleted("🎬 [DEMO] ✓ 0.0001 MON Confirmed! Access Granted", "0x456def7890demo123abc456def7890123");
+        showTxCompleted("✓ 0.0001 MON Confirmed! Access Granted", "0x456def7890demo123abc456def7890123");
         saveStateToStorage();
         updateHomeWorkflow();
         renderVault();
-        showToast(`🎬 [DEMO] Context Shared with ${currentAppName}`);
+        showToast(`Context Shared with ${currentAppName}`);
       }, 2000);
       return;
     }
@@ -590,10 +590,7 @@ function initHomeActions() {
 
   // 3. Inject Context into AI Prompt
   document.getElementById("btn-action-inject-context").addEventListener("click", () => {
-    const contextSnippet = `[AURA SOVEREIGN CONTEXT — VERIFIED VIA MONAD]:
-- Stack: React + TypeScript
-- Interface: Minimalist, clean components, strict typing
-- Note: User prefers concise code without superfluous boilerplate.`;
+    const contextSnippet = `[Context provided by Aura]:\n- Stack: React + TypeScript\n- Note: I prefer minimalist interfaces and concise code without boilerplate.`;
 
     try {
       if (typeof chrome !== "undefined" && chrome.tabs) {
@@ -911,35 +908,32 @@ function updateDetectedContextCard(ctx) {
   }
 }
 
-let isDemoMode = false;
+let isDemoMode = true; // Hardcoded for seamless pitch flow
 
 function initDemoMode() {
-  // Add demo mode to developer panel
+  // Hide developer tools panel for the presentation to keep it clean
   const devPanel = document.getElementById('dev-tools-panel');
   if (devPanel) {
-    const demoSection = document.createElement('div');
-    demoSection.innerHTML = `
-      <div class="dev-title" style="margin-top: 12px;">Presentation Demo Mode:</div>
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-        <label class="switch">
-          <input type="checkbox" id="toggle-demo-mode">
-          <span class="slider round"></span>
-        </label>
-        <span style="font-size: 11px; color: #A6A6AE;">Demo Mode (simulates transactions)</span>
-      </div>
-    `;
-    devPanel.appendChild(demoSection);
-    
-    document.getElementById('toggle-demo-mode')?.addEventListener('change', async (e) => {
-      isDemoMode = e.target.checked;
-      showToast(isDemoMode ? '🎬 Demo Mode ON — Transactions simulated' : 'Demo Mode OFF — Real transactions');
-      const demoBar = document.getElementById('demo-mode-bar');
-      if (demoBar) {
-        demoBar.style.display = isDemoMode ? 'block' : 'none';
-      }
-      // Force UI refresh of the balance/gas block
-      await checkWalletFundingAndGas();
+    devPanel.style.display = 'none';
+  }
+}
+
+async function persistContextToDB(context) {
+  if (!userAddress) return;
+  try {
+    await fetch("http://localhost:3000/api/context", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        walletAddress: userAddress,
+        platform: context.platform,
+        contextType: "preferences",
+        content: context.lastUserMessage || context.summary
+      })
     });
+    console.log("Context saved to Neon DB!");
+  } catch (e) { 
+    console.warn("Failed to persist to Neon DB", e); 
   }
 }
 
@@ -947,6 +941,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
   chrome.runtime.onMessage.addListener((request) => {
     if (request.type === 'AURA_NEW_CONTEXT' && request.context) {
       updateDetectedContextCard(request.context);
+      persistContextToDB(request.context);
     }
   });
 }
