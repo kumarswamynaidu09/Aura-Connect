@@ -331,6 +331,12 @@ async function checkWalletFundingAndGas() {
     cachedUserBalance = bal.formatted;
     cachedUserBalanceWei = bal.wei;
 
+    // OVERRIDE FOR DEMO MODE
+    if (typeof isDemoMode !== 'undefined' && isDemoMode) {
+      cachedUserBalance = "10.0000";
+      cachedUserBalanceWei = 10000000000000000000n; // 10 MON
+    }
+
     // Calculate dynamic gas requirement
     const gasPrice = await window.AuraWeb3.publicClient.getGasPrice();
     const gasLimit = 48000n;
@@ -351,6 +357,7 @@ async function checkWalletFundingAndGas() {
     const okBox = document.getElementById("funding-ok-box");
     const okBalDisplay = document.getElementById("funding-ok-balance-display");
     const unlockBtn = document.getElementById("btn-action-allow-unlock");
+    const saveBtn = document.getElementById("btn-action-save-context");
 
     if (subEl) subEl.innerText = `0.0001 MON access fee + ~${gasMon} MON gas`;
     if (totalEl) totalEl.innerText = `~${totalCostMon} MON`;
@@ -366,6 +373,12 @@ async function checkWalletFundingAndGas() {
         unlockBtn.style.cursor = "not-allowed";
         unlockBtn.title = "Insufficient MON balance on Monad Testnet";
       }
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.style.opacity = "0.4";
+        saveBtn.style.cursor = "not-allowed";
+        saveBtn.title = "Insufficient MON balance";
+      }
     } else {
       if (neededBox) neededBox.style.display = "none";
       if (okBox) okBox.style.display = "flex";
@@ -375,6 +388,12 @@ async function checkWalletFundingAndGas() {
         unlockBtn.style.opacity = "1";
         unlockBtn.style.cursor = "pointer";
         unlockBtn.title = "Execute on Monad Testnet";
+      }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = "1";
+        saveBtn.style.cursor = "pointer";
+        saveBtn.title = "Save to Monad Testnet";
       }
     }
   } catch (err) {
@@ -911,13 +930,15 @@ function initDemoMode() {
     `;
     devPanel.appendChild(demoSection);
     
-    document.getElementById('toggle-demo-mode')?.addEventListener('change', (e) => {
+    document.getElementById('toggle-demo-mode')?.addEventListener('change', async (e) => {
       isDemoMode = e.target.checked;
       showToast(isDemoMode ? '🎬 Demo Mode ON — Transactions simulated' : 'Demo Mode OFF — Real transactions');
       const demoBar = document.getElementById('demo-mode-bar');
       if (demoBar) {
         demoBar.style.display = isDemoMode ? 'block' : 'none';
       }
+      // Force UI refresh of the balance/gas block
+      await checkWalletFundingAndGas();
     });
   }
 }
