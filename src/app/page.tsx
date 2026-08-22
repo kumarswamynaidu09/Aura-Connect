@@ -141,8 +141,18 @@ function HomeView({ setView }: { setView: (v: any) => void }) {
 // ==========================================
 function CreateView({ setView }: { setView: (v: any) => void }) {
   const [assetFile, setAssetFile] = useState<File | null>(null);
-  const [assetText, setAssetText] = useState("");
-  const [inputType, setInputType] = useState<"file" | "text">("file");
+  const [assetText, setAssetText] = useState(`[SYSTEM]: You are an advanced AI research assistant.
+[USER]: Generate a summary of the upcoming theoretical changes to EVM parallelization.
+[ASSISTANT]: 
+The evolution of EVM parallelization represents a fundamental shift in blockchain scalability. Rather than executing transactions sequentially, next-generation networks (like Monad) implement optimistic parallel execution. 
+
+Key architectural changes include:
+1. State Access Tracking: The engine tracks memory and storage slots accessed during execution.
+2. Optimistic Execution: Transactions are run simultaneously across multiple threads.
+3. Conflict Resolution: If a transaction reads state modified by a prior concurrent transaction, it is scheduled for re-execution.
+
+This theoretical model effectively decouples transaction processing speed from the standard block-time limitations of legacy EVM environments, allowing throughputs exceeding 10,000 TPS while maintaining 100% bytecode compatibility.`);
+  const [inputType, setInputType] = useState<"file" | "text">("text");
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [passport, setPassport] = useState<any>(null);
@@ -419,8 +429,18 @@ function CreateView({ setView }: { setView: (v: any) => void }) {
 // ==========================================
 function VerifyView() {
   const [assetFile, setAssetFile] = useState<File | null>(null);
-  const [assetText, setAssetText] = useState("");
-  const [inputType, setInputType] = useState<"file" | "text">("file");
+  const [assetText, setAssetText] = useState(`[SYSTEM]: You are an advanced AI research assistant.
+[USER]: Generate a summary of the upcoming theoretical changes to EVM parallelization.
+[ASSISTANT]: 
+The evolution of EVM parallelization represents a fundamental shift in blockchain scalability. Rather than executing transactions sequentially, next-generation networks (like Monad) implement optimistic parallel execution. 
+
+Key architectural changes include:
+1. State Access Tracking: The engine tracks memory and storage slots accessed during execution.
+2. Optimistic Execution: Transactions are run simultaneously across multiple threads.
+3. Conflict Resolution: If a transaction reads state modified by a prior concurrent transaction, it is scheduled for re-execution.
+
+This theoretical model effectively decouples transaction processing speed from the standard block-time limitations of legacy EVM environments, allowing throughputs exceeding 10,000 TPS while maintaining 100% bytecode compatibility.`);
+  const [inputType, setInputType] = useState<"file" | "text">("text");
   const [passportFile, setPassportFile] = useState<File | null>(null);
   
   const [isVerifying, setIsVerifying] = useState(false);
