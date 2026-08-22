@@ -208,11 +208,15 @@ function extractConversationContext() {
     });
     // Fallback: try the main content area
     if (messages.length === 0) {
-      const turns = document.querySelectorAll('div[class*="markdown"], div[class*="message"], .text-base, [data-message-id]');
+      const turns = document.querySelectorAll('article, div[class*="markdown"], div[class*="message"], .text-base, [data-message-id], .whitespace-pre-wrap, p');
       turns.forEach(el => {
-        const text = el.innerText?.trim();
-        if (text && text.length > 5) { // Lowered threshold from 20 to 5 to catch shorter test messages
-          messages.push({ role: 'unknown', text: text.substring(0, 500) });
+        const text = el.innerText?.trim() || el.textContent?.trim();
+        // Ignore very long blocks that are just the entire page text
+        if (text && text.length > 5 && text.length < 2000) {
+          // Avoid pushing duplicate text if a parent was already processed
+          if (!messages.some(m => m.text.includes(text) || text.includes(m.text))) {
+            messages.push({ role: 'unknown', text: text.substring(0, 500) });
+          }
         }
       });
     }
@@ -274,22 +278,27 @@ function extractUserContextSummary() {
   if (recent.length === 0) {
     // Fall back to any messages
     const anyRecent = messages.slice(-3);
-    return {
+    const result = {
       platform: detectPlatform(),
       messageCount: messages.length,
       summary: anyRecent.map(m => m.text).join(' | '),
       lastUserMessage: anyRecent.length > 0 ? anyRecent[anyRecent.length - 1].text : '',
       hasContent: anyRecent.length > 0,
     };
+    console.log("[AURA] Extracted Context (Fallback):", result);
+    return result;
   }
   
-  return {
+  const result = {
     platform: detectPlatform(),
     messageCount: messages.length,
     summary: recent.map(m => m.text).join(' | '),
     lastUserMessage: recent[recent.length - 1].text,
     hasContent: recent.length > 0,
   };
+  
+  console.log("[AURA] Extracted Context:", result);
+  return result;
 }
 
 // Watch for new conversation messages
