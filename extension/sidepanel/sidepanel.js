@@ -538,7 +538,7 @@ function initHomeActions() {
             // MOCK DATA INJECTION FOR HACKATHON PRESENTATION
             // If it fails to read the page, inject realistic mock data so the demo never fails
             ctx = {
-              platform: 'ChatGPT',
+              platform: currentAppName || 'Unknown',
               messageCount: 5,
               summary: 'User is developing a React/Next.js application on Monad and requested help optimizing EVM parallelization queries.',
               lastUserMessage: 'I need to write a highly optimized smart contract in Solidity that leverages Monad’s parallel execution. Use Yul for the inner loop and assume a 10,000 TPS environment.',
